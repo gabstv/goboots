@@ -105,8 +105,7 @@ func (app *App) ListenTLS() error {
 
 func (app *App) ListenAll() error {
 	go app.Listen()
-	go app.ListenTLS()
-	return nil
+	return app.ListenTLS()
 }
 
 func (a *App) RegisterController(c IController) {
