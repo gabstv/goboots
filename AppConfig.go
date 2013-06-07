@@ -15,4 +15,5 @@ type AppConfig struct {
 	// TLS
 	TLSCertificatePath string
 	TLSKeyPath         string
+	TLSRedirect        bool
 }

@@ -40,6 +40,27 @@ type App struct {
 	controllerMap map[string]IController
 	templateMap   map[string]*templateInfo
 	basePath      string
+	entryHTTP     *appHTTP
+	entryHTTPS    *appHTTPS
+}
+
+type appHTTP struct {
+}
+
+type appHTTPS struct {
+}
+
+func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if APP.Config.TLSRedirect {
+		// redirect to https
+		//TODO: redirect it properly
+		log.Println("TODO: redirect to https")
+	}
+	APP.ServeHTTP(w, r)
+}
+
+func (a *appHTTPS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	APP.ServeHTTP(w, r)
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +80,7 @@ func (app *App) Listen() error {
 	}
 	once_app.Do(onceBody)
 	defer app.DbSession.Close() // this will run when the function quits
-	return http.ListenAndServe(app.Config.HostAddr, app)
+	return http.ListenAndServe(app.Config.HostAddr, app.entryHTTP)
 }
 
 func (app *App) ListenTLS() error {
@@ -79,7 +100,13 @@ func (app *App) ListenTLS() error {
 		}
 		return er2
 	}
-	return http.ListenAndServeTLS(app.Config.HostAddrTLS, app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app)
+	return http.ListenAndServeTLS(app.Config.HostAddrTLS, app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
+}
+
+func (app *App) ListenAll() error {
+	go app.Listen()
+	go app.ListenTLS()
+	return nil
 }
 
 func (a *App) RegisterController(c IController) {
@@ -158,6 +185,8 @@ func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
 }
 
 func (app *App) loadAll() {
+	app.entryHTTP = &appHTTP{}
+	app.entryHTTPS = &appHTTPS{}
 	app.loadConfig()
 	app.loadMongo()
 	app.loadTemplates()
