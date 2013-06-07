@@ -23,6 +23,7 @@ var (
 	DB       *mgo.Database
 	APP      *App
 	once_app sync.Once
+	wg       *sync.WaitGroup
 )
 
 type App struct {
@@ -104,7 +105,13 @@ func (app *App) ListenTLS() error {
 }
 
 func (app *App) ListenAll() error {
-	go app.Listen()
+	wg = &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		log.Fatal(app.Listen())
+		wg.Done()
+	}()
+	wg.Wait()
 	return app.ListenTLS()
 }
 
