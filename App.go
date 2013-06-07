@@ -111,8 +111,13 @@ func (app *App) ListenAll() error {
 		log.Fatal(app.Listen())
 		wg.Done()
 	}()
+	wg.Add(1)
+	go func() {
+		log.Fatal(app.ListenTLS())
+		wg.Done()
+	}()
 	wg.Wait()
-	return app.ListenTLS()
+	return nil
 }
 
 func (a *App) RegisterController(c IController) {
