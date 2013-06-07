@@ -110,8 +110,9 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 			// try get from cache
 			msession = APP.SessionCache.GetSession(sid)
 			if msession != nil {
+				cache := APP.SessionCache.GetCache(sid)
 				mu_session.Lock()
-				APP.SessionCache.GetCache(sid).UpdateTime()
+				cache.UpdateTime()
 				mu_session.Unlock()
 				return msession
 			}
