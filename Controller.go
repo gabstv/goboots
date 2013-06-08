@@ -76,7 +76,7 @@ func (c *Controller) PreFilter(w http.ResponseWriter, r *http.Request, params []
 }
 
 func (c *Controller) Render(w http.ResponseWriter, r *http.Request, content interface{}) {
-	c.render(w, r, content, nil)
+	c.render(w, r, content, "")
 }
 
 func (c *Controller) RenderWithLayout(w http.ResponseWriter, r *http.Request, content interface{}, customLayout string) {
