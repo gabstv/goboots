@@ -84,7 +84,7 @@ func (c *Controller) RenderWithLayout(w http.ResponseWriter, r *http.Request, co
 }
 
 func (c *Controller) render(w http.ResponseWriter, r *http.Request, content interface{}, customLayout string) {
-	if len(c.Layout) && len(customLayout) == 0 {
+	if len(c.Layout) == 0 && len(customLayout) == 0 {
 		// no layout defined!
 		var buff bytes.Buffer
 		binary.Write(&buff, binary.LittleEndian, content)
