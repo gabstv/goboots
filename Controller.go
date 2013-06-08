@@ -76,19 +76,30 @@ func (c *Controller) PreFilter(w http.ResponseWriter, r *http.Request, params []
 }
 
 func (c *Controller) Render(w http.ResponseWriter, r *http.Request, content interface{}) {
+	c.render(w, r, content, nil)
+}
 
-	if len(c.Layout) == 0 {
+func (c *Controller) RenderWithLayout(w http.ResponseWriter, r *http.Request, content interface{}, customLayout string) {
+	c.render(w, r, content, customLayout)
+}
+
+func (c *Controller) render(w http.ResponseWriter, r *http.Request, content interface{}, customLayout string) {
+	if len(c.Layout) && len(customLayout) == 0 {
 		// no layout defined!
 		var buff bytes.Buffer
 		binary.Write(&buff, binary.LittleEndian, content)
 		w.Write(buff.Bytes())
 		return
 	}
+	layoutName := c.Layout
+	if len(customLayout) > 0 {
+		layoutName = customLayout
+	}
 	var layoutTpl *template.Template
 	if len(c.App.Config.DefaultLanguage) > 0 {
-		layoutTpl = c.App.GetLocalizedLayout(c.Layout, w, r)
+		layoutTpl = c.App.GetLocalizedLayout(layoutName, w, r)
 	} else {
-		layoutTpl = c.App.GetLayout(c.Layout)
+		layoutTpl = c.App.GetLayout(layoutName)
 	}
 	layoutTpl.Execute(w, content)
 }
