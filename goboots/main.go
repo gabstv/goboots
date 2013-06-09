@@ -9,7 +9,8 @@ import (
 	"text/template"
 )
 
-const header = `######################################
+const header = `
+######################################
 ##          g o b o o t s           ##
 ## http://gabstv.github.com/goboots ##
 ##                                  ##
