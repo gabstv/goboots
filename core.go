@@ -190,6 +190,7 @@ func FlushSession(s *Session) error {
 
 func DestroySession(w http.ResponseWriter, r *http.Request, s *Session) {
 	DB.C("goboots_sessid").Remove(bson.M{"sid": s.SID})
+	APP.SessionCache.DeleteCache(s.SID)
 	SetCookieAdv(w, "goboots_sessid", "", "", "", time.Now(), 1, false, true)
 }
 
