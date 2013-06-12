@@ -5,6 +5,8 @@ type AppConfig struct {
 	Version         string
 	HostAddr        string
 	HostAddrTLS     string
+	UseEnvPort      bool
+	EnvPortIsTLS    bool
 	MongoDbs        string
 	Database        string
 	Salt            string

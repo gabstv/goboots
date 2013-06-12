@@ -80,7 +80,10 @@ func (app *App) Listen() error {
 	}
 	once_app.Do(onceBody)
 	defer app.DbSession.Close() // this will run when the function quits
-	return http.ListenAndServe(app.Config.HostAddr, app.entryHTTP)
+	if !app.Config.UseEnvPort {
+		return http.ListenAndServe(app.Config.HostAddr, app.entryHTTP)
+	}
+	return http.ListenAndServe(os.Getenv("PORT"), app.entryHTTP)
 }
 
 func (app *App) ListenTLS() error {
@@ -100,16 +103,30 @@ func (app *App) ListenTLS() error {
 		}
 		return er2
 	}
+	if !app.Config.UseEnvPort {
+		return http.ListenAndServeTLS(app.Config.HostAddrTLS, app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
+	}
 	return http.ListenAndServeTLS(app.Config.HostAddrTLS, app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
 }
 
 func (app *App) ListenAll() error {
-	go func() {
-		app.Listen()
-	}()
-	go func() {
-		app.ListenTLS()
-	}()
+	if len(app.ProjectFolder) < 1 {
+		app.ProjectFolder = "app"
+	}
+	onceBody := func() {
+		app.loadAll()
+	}
+	once_app.Do(onceBody)
+	if !app.Config.UseEnvPort || (app.Config.UseEnvPort && !app.Config.EnvPortIsTLS) {
+		go func() {
+			app.Listen()
+		}()
+	}
+	if !app.Config.UseEnvPort || (app.Config.UseEnvPort && app.Config.EnvPortIsTLS) {
+		go func() {
+			app.ListenTLS()
+		}()
+	}
 	ch := make(chan bool)
 	<-ch
 	return nil
