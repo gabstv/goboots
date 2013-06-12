@@ -83,7 +83,7 @@ func (app *App) Listen() error {
 	if !app.Config.UseEnvPort {
 		return http.ListenAndServe(app.Config.HostAddr, app.entryHTTP)
 	}
-	return http.ListenAndServe(os.Getenv("PORT"), app.entryHTTP)
+	return http.ListenAndServe(":"+os.Getenv("PORT"), app.entryHTTP)
 }
 
 func (app *App) ListenTLS() error {
@@ -104,7 +104,7 @@ func (app *App) ListenTLS() error {
 		return er2
 	}
 	if !app.Config.UseEnvPort {
-		return http.ListenAndServeTLS(app.Config.HostAddrTLS, app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
+		return http.ListenAndServeTLS(":"+os.Getenv("PORT"), app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
 	}
 	return http.ListenAndServeTLS(app.Config.HostAddrTLS, app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
 }
