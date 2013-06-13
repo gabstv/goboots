@@ -80,10 +80,7 @@ func (app *App) Listen() error {
 	}
 	once_app.Do(onceBody)
 	defer app.DbSession.Close() // this will run when the function quits
-	if !app.Config.UseEnvPort {
-		return http.ListenAndServe(app.Config.HostAddr, app.entryHTTP)
-	}
-	return http.ListenAndServe(":"+os.Getenv("PORT"), app.entryHTTP)
+	return http.ListenAndServe(app.Config.HostAddr, app.entryHTTP)
 }
 
 func (app *App) ListenTLS() error {
@@ -103,9 +100,6 @@ func (app *App) ListenTLS() error {
 		}
 		return er2
 	}
-	if !app.Config.UseEnvPort {
-		return http.ListenAndServeTLS(":"+os.Getenv("PORT"), app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
-	}
 	return http.ListenAndServeTLS(app.Config.HostAddrTLS, app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
 }
 
@@ -117,16 +111,12 @@ func (app *App) ListenAll() error {
 		app.loadAll()
 	}
 	once_app.Do(onceBody)
-	if !app.Config.UseEnvPort || (app.Config.UseEnvPort && !app.Config.EnvPortIsTLS) {
-		go func() {
-			app.Listen()
-		}()
-	}
-	if !app.Config.UseEnvPort || (app.Config.UseEnvPort && app.Config.EnvPortIsTLS) {
-		go func() {
-			app.ListenTLS()
-		}()
-	}
+	go func() {
+		app.Listen()
+	}()
+	go func() {
+		app.ListenTLS()
+	}()
 	ch := make(chan bool)
 	<-ch
 	return nil
@@ -251,7 +241,10 @@ func (app *App) loadConfig() {
 	bytes, err = ioutil.ReadFile(dir)
 	__panic(err)
 	err = json.Unmarshal(bytes, &app.Routes)
-	//fmt.Println("trying to parse routes")
+
+	// parse Config
+	app.Config.ParseEnv()
+
 	__panic(err)
 	for i := 0; i < len(app.Routes); i++ {
 		if strings.Index(app.Routes[i].Path, "^") == 0 {
