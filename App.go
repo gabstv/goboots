@@ -27,7 +27,7 @@ var (
 
 type App struct {
 	// "public"
-	ProjectFolder string
+	AppConfigPath string
 	Config        AppConfig
 	Routes        []Route
 	DbSession     *mgo.Session
@@ -72,9 +72,6 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) Listen() error {
-	if len(app.ProjectFolder) < 1 {
-		app.ProjectFolder = "app"
-	}
 	onceBody := func() {
 		app.loadAll()
 	}
@@ -84,9 +81,6 @@ func (app *App) Listen() error {
 }
 
 func (app *App) ListenTLS() error {
-	if len(app.ProjectFolder) < 1 {
-		app.ProjectFolder = "app"
-	}
 	onceBody := func() {
 		app.loadAll()
 	}
@@ -104,9 +98,6 @@ func (app *App) ListenTLS() error {
 }
 
 func (app *App) ListenAll() error {
-	if len(app.ProjectFolder) < 1 {
-		app.ProjectFolder = "app"
-	}
 	onceBody := func() {
 		app.loadAll()
 	}
@@ -144,16 +135,18 @@ func (a *App) GetViewTemplate(localpath string) *template.Template {
 	if len(a.Config.LocalePath) > 0 {
 		localpath = localpath + "_" + i18ngo.GetDefaultLanguageCode()
 	}
-	pieces := strings.Split(localpath, "/")
-	path := strings.Join(append([]string{a.basePath, a.ProjectFolder, "view"}, pieces...), string(os.PathSeparator))
-	return a.templateMap[path].data
+	//pieces := strings.Split(localpath, "/")
+	//path := strings.Join(append([]string{a.basePath, a.AppConfigPath, "view"}, pieces...), string(os.PathSeparator))
+	//return a.templateMap[path].data
+	return a.templateMap[localpath].data
 }
 
 func (a *App) GetLocalizedViewTemplate(localpath string, w http.ResponseWriter, r *http.Request) *template.Template {
 	localpath = localpath + "_" + GetUserLang(w, r)
-	pieces := strings.Split(localpath, "/")
-	path := strings.Join(append([]string{a.basePath, a.ProjectFolder, "view"}, pieces...), string(os.PathSeparator))
-	return a.templateMap[path].data
+	//pieces := strings.Split(localpath, "/")
+	//path := strings.Join(append([]string{a.basePath, a.AppConfigPath, "view"}, pieces...), string(os.PathSeparator))
+	//return a.templateMap[path].data
+	return a.templateMap[localpath].data
 }
 
 func (a *App) GetLayout(name string) *template.Template {
@@ -222,14 +215,29 @@ func (app *App) loadConfig() {
 	app.Random = rand.New(src)
 
 	app.basePath, _ = os.Getwd()
-	ps := string(os.PathSeparator)
 	var dir string
 	var bytes []byte
 	var err error
 	//
 	// LOAD AppConfig.json
 	//
-	dir = strings.Join([]string{app.basePath, app.ProjectFolder, "config", "AppConfig.json"}, ps)
+	if len(app.AppConfigPath) < 1 {
+		// try to get appconfig path from env
+		app.AppConfigPath = os.Getenv("APPCONFIGPATH")
+		if len(app.AppConfigPath) < 1 {
+			app.AppConfigPath = os.Getenv("APPCONFIG")
+			if len(app.AppConfigPath) < 1 {
+				// try to get $cwd/AppConfig.json
+				_, err := os.Stat("AppConfig.json")
+				if os.IsNotExist(err) {
+					__panic(err)
+					return
+				}
+				app.AppConfigPath = "AppConfig.json"
+			}
+		}
+	}
+	dir = FormatPath(app.AppConfigPath)
 	bytes, err = ioutil.ReadFile(dir)
 	__panic(err)
 	err = json.Unmarshal(bytes, &app.Config)
@@ -237,15 +245,14 @@ func (app *App) loadConfig() {
 	//
 	// LOAD Routes.json
 	//
-	dir = strings.Join([]string{app.basePath, app.ProjectFolder, "config", "Routes.json"}, ps)
+	dir = FormatPath(app.Config.RoutesConfigPath)
 	bytes, err = ioutil.ReadFile(dir)
 	__panic(err)
 	err = json.Unmarshal(bytes, &app.Routes)
-
+	__panic(err)
 	// parse Config
 	app.Config.ParseEnv()
 
-	__panic(err)
 	for i := 0; i < len(app.Routes); i++ {
 		if strings.Index(app.Routes[i].Path, "^") == 0 {
 			app.Routes[i]._t = 2
@@ -259,16 +266,7 @@ func (app *App) loadConfig() {
 	// LOAD Localization Files (i18n)
 	//
 	if len(app.Config.LocalePath) > 0 {
-		locPath := app.Config.LocalePath
-		if strings.Index(locPath, "./") == 0 {
-			locPath = filepath.Clean(app.basePath + ps + app.ProjectFolder + ps + locPath[2:])
-		} else if strings.Index(locPath, "../") == 0 {
-			locPath = filepath.Clean(app.basePath + ps + locPath[3:])
-		} else if strings.Index(locPath, ":\\\\") == 1 || strings.Index(locPath, "/") == 0 {
-			locPath = filepath.Clean(locPath)
-		} else {
-			locPath = filepath.Clean(app.basePath + ps + app.ProjectFolder + ps + locPath)
-		}
+		locPath := FormatPath(app.Config.LocalePath)
 		fi, _ := os.Stat(locPath)
 		if fi == nil {
 			log.Fatal("Could not load i18n files at path " + locPath + "\n")
@@ -292,14 +290,12 @@ func (app *App) loadConfig() {
 func (a *App) loadTemplates() {
 	log.Println("loading template files (.tpl)")
 	a.templateMap = make(map[string]*templateInfo, 0)
-	fdirs := []string{a.basePath, a.ProjectFolder, "view"}
-	fdir := strings.Join(fdirs, string(os.PathSeparator))
+	fdir := FormatPath(a.Config.ViewsFolderPath)
 	bytesLoaded := int(0)
 	langs := i18ngo.GetLanguageCodes()
 	vPath := func(path string, f os.FileInfo, err error) error {
-		//fmt.Printf("parsing %s [%d]\n", path, strings.LastIndex(path, ".tpl"))
-		if strings.LastIndex(path, ".tpl") == len(path)-4 {
-			//fmt.Printf("[[%s]] is a template file!\n", path)
+		//if strings.LastIndex(path, ".tpl") == len(path)-4 {
+		if filepath.Ext(path) == ".tpl" || filepath.Ext(path) == ".html" {
 			bytes, _ := ioutil.ReadFile(path)
 			if len(a.Config.LocalePath) < 1 {
 				tplInfo := &templateInfo{
@@ -319,7 +315,6 @@ func (a *App) loadTemplates() {
 						lastUpdate: time.Now(),
 					}
 					locPName := path + "_" + lcv
-					log.Printf("templates sprinted %s\n", locPName)
 					templ := template.New(locPName)
 					templ, err0 := templ.Parse(LocalizeTemplate(string(bytes), lcv))
 					__panic(err0)
@@ -338,16 +333,10 @@ func (a *App) loadTemplates() {
 
 func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) {
 	niceurl, _ := url.QueryUnescape(r.URL.String())
-	urlparts := strings.Split(niceurl, "/")[1:]
 	// after all routes are dealt with
-	//TODO: check if file exists, if not, throw a 404
-	fdirs := append([]string{app.basePath, app.ProjectFolder, "public"}, urlparts...)
-	fdir := strings.Join(fdirs, string(os.PathSeparator))
+	//TODO: have an option to have these files in memory
+	fdir := FormatPath(app.Config.PublicFolderPath + "/" + niceurl)
 	//
-	//if _, err := os.Stat(fdir); os.IsNotExist(err) {
-	//	w.WriteHeader(404)
-	//	return
-	//}
 	info, err := os.Stat(fdir)
 	if os.IsNotExist(err) {
 		app.DoHTTPError(w, r, 404)

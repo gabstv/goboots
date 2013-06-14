@@ -21,6 +21,11 @@ type AppConfig struct {
 	TLSCertificatePath string
 	TLSKeyPath         string
 	TLSRedirect        bool
+
+	// Paths
+	RoutesConfigPath string
+	ViewsFolderPath  string
+	PublicFolderPath string
 }
 
 func (a *AppConfig) ParseEnv() {
@@ -46,4 +51,9 @@ func (a *AppConfig) ParseEnv() {
 	//TLS
 	a.TLSCertificatePath = re.ReplaceAllStringFunc(a.TLSCertificatePath, replacer)
 	a.TLSKeyPath = re.ReplaceAllStringFunc(a.TLSKeyPath, replacer)
+
+	// Paths
+	a.RoutesConfigPath = re.ReplaceAllStringFunc(a.RoutesConfigPath, replacer)
+	a.ViewsFolderPath = re.ReplaceAllStringFunc(a.ViewsFolderPath, replacer)
+	a.PublicFolderPath = re.ReplaceAllStringFunc(a.PublicFolderPath, replacer)
 }

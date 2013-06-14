@@ -8,6 +8,8 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"text/template"
@@ -276,4 +278,14 @@ func __panic(err error) {
 	if err != nil {
 		log.Panicln(err)
 	}
+}
+
+func FormatPath(rawpath string) string {
+	cwd, _ := os.Getwd()
+	if strings.HasPrefix(rawpath, "./") {
+		return filepath.Clean(cwd + rawpath[1:])
+	} else if strings.HasPrefix(rawpath, "../") {
+		return filepath.Clean(cwd + "/" + rawpath)
+	}
+	return filepath.Clean(rawpath)
 }
