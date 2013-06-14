@@ -138,6 +138,7 @@ func (a *App) GetViewTemplate(localpath string) *template.Template {
 	//pieces := strings.Split(localpath, "/")
 	//path := strings.Join(append([]string{a.basePath, a.AppConfigPath, "view"}, pieces...), string(os.PathSeparator))
 	//return a.templateMap[path].data
+	log.Println("GET-TEMPLATE" + localpath)
 	return a.templateMap[localpath].data
 }
 
@@ -146,6 +147,7 @@ func (a *App) GetLocalizedViewTemplate(localpath string, w http.ResponseWriter, 
 	//pieces := strings.Split(localpath, "/")
 	//path := strings.Join(append([]string{a.basePath, a.AppConfigPath, "view"}, pieces...), string(os.PathSeparator))
 	//return a.templateMap[path].data
+	log.Println("GET-TEMPLATE" + localpath)
 	return a.templateMap[localpath].data
 }
 
@@ -297,6 +299,7 @@ func (a *App) loadTemplates() {
 		//if strings.LastIndex(path, ".tpl") == len(path)-4 {
 		if filepath.Ext(path) == ".tpl" || filepath.Ext(path) == ".html" {
 			bytes, _ := ioutil.ReadFile(path)
+			log.Println("SET-TEMPLATE" + path)
 			if len(a.Config.LocalePath) < 1 {
 				tplInfo := &templateInfo{
 					path:       path,
