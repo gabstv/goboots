@@ -39,7 +39,7 @@ type IModel interface {
 }
 
 type Model struct {
-	Id bson.ObjectId `json:"id",bson:"_id",omitempty`
+	Id bson.ObjectId `json:"id",bson:"_id,omitempty"`
 }
 
 func (m *Model) GetId() bson.ObjectId {
