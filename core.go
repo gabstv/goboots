@@ -163,23 +163,27 @@ func GetUserLang(w http.ResponseWriter, r *http.Request) string {
 	}
 	// get lang from http request
 	alh := r.Header.Get("Accept-Language")
-	validlangs := i18ngo.GetLanguageCodes()
-	// break alh
-	alh0 := strings.Split(alh, ",")
-	for _, v := range alh0 {
-		lc := strings.Split(v, ";")[0][0:2]
-		if StringIndexOf(validlangs, lc) != -1 {
-			l = lc
-			break
+	// 2013-07-29 : not all clients actually send this header (googlebot/wget etc)
+	if len(alh) > 1 {
+		validlangs := i18ngo.GetLanguageCodes()
+		// break alh
+		alh0 := strings.Split(alh, ",")
+		for _, v := range alh0 {
+			lc := strings.Split(v, ";")[0][0:2]
+			if StringIndexOf(validlangs, lc) != -1 {
+				l = lc
+				break
+			}
 		}
+		if len(l) > 0 {
+			// just update the cookies
+			SetCookieSimple(w, "lang", l)
+		} else {
+			l = i18ngo.GetDefaultLanguageCode()
+		}
+		return l
 	}
-	if len(l) > 0 {
-		// just update the cookies
-		SetCookieSimple(w, "lang", l)
-	} else {
-		l = i18ngo.GetDefaultLanguageCode()
-	}
-	return l
+	return i18ngo.GetDefaultLanguageCode()
 }
 
 func SetUserLang(w http.ResponseWriter, r *http.Request, langcode string) {
