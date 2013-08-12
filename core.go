@@ -149,7 +149,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 	}
 	err = DB.C("goboots_sessid").Insert(session)
 	__panic(err)
-	SetCookieAdv(w, "goboots_sessid", sid, "", "", time.Now().AddDate(0, 1, 0), 0, false, true)
+	SetCookieAdv(w, "goboots_sessid", sid, "/", "", time.Now().AddDate(0, 1, 0), 0, false, true)
 	return session
 }
 
@@ -197,7 +197,7 @@ func FlushSession(s *Session) error {
 func DestroySession(w http.ResponseWriter, r *http.Request, s *Session) {
 	DB.C("goboots_sessid").Remove(bson.M{"sid": s.SID})
 	APP.SessionCache.DeleteCache(s.SID)
-	SetCookieAdv(w, "goboots_sessid", "", "", "", time.Now(), 1, false, true)
+	SetCookieAdv(w, "goboots_sessid", "", "/", "", time.Now(), 1, false, true)
 }
 
 func _validateSidString(sid string) bool {
@@ -240,7 +240,7 @@ func SetCookieAdv(w http.ResponseWriter, name string, value string, path string,
 }
 
 func SetCookieSimple(w http.ResponseWriter, key string, value string) {
-	SetCookieAdv(w, key, value, "", "", time.Now().AddDate(100, 0, 0), 0, false, false)
+	SetCookieAdv(w, key, value, "/", "", time.Now().AddDate(100, 0, 0), 0, false, false)
 }
 
 func StrConcat(strings ...string) string {
