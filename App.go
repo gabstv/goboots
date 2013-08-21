@@ -37,11 +37,13 @@ type App struct {
 	GenericCaches *GenericCacheCollection
 	Random        *rand.Rand
 	// "private"
-	controllerMap map[string]IController
-	templateMap   map[string]*templateInfo
-	basePath      string
-	entryHTTP     *appHTTP
-	entryHTTPS    *appHTTPS
+	controllerMap  map[string]IController
+	templateMap    map[string]*templateInfo
+	basePath       string
+	entryHTTP      *appHTTP
+	entryHTTPS     *appHTTPS
+	didRunRoutines bool
+	mainChan       chan error
 }
 
 type appHTTP struct {
@@ -72,45 +74,70 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) Listen() error {
-	onceBody := func() {
-		app.loadAll()
-	}
-	once_app.Do(onceBody)
-	defer app.DbSession.Close() // this will run when the function quits
-	return http.ListenAndServe(app.Config.HostAddr, app.entryHTTP)
-}
-
-func (app *App) ListenTLS() error {
+	app.mainChan = make(chan error)
 	onceBody := func() {
 		app.loadAll()
 	}
 	once_app.Do(onceBody)
 	defer app.DbSession.Close()
+	go func() {
+		app.listen()
+	}()
+	go func() {
+		app.listenTLS()
+	}()
+	app.runRoutines()
+	var err error
+	err = <-app.mainChan
+	return err
+}
+
+func (app *App) ListenAll() error {
+	log.Println("ListenAll() is deprecated. Please use Listen()")
+	return app.Listen()
+}
+
+func (app *App) ListenTLS() error {
+	log.Println("ListenTLS() is deprecated. Please use Listen()")
+	return app.Listen()
+}
+
+func (app *App) listen() {
+	onceBody := func() {
+		app.loadAll()
+	}
+	once_app.Do(onceBody)
+	if len(app.Config.HostAddr) < 1 {
+		return
+	}
+	er3 := http.ListenAndServe(app.Config.HostAddr, app.entryHTTP)
+	app.mainChan <- er3
+}
+
+func (app *App) listenTLS() {
+	onceBody := func() {
+		app.loadAll()
+	}
+	once_app.Do(onceBody)
+	if len(app.Config.HostAddrTLS) < 1 {
+		// make TLS optional (commented this)
+		//app.mainChan <- &AppError{
+		//	Id:      ErrTLSNil,
+		//	Message: "Config HostAddrTLS is null. Cannot listen to TLS connections.",
+		//}
+		return
+	}
 	if len(app.Config.TLSCertificatePath) < 1 || len(app.Config.TLSKeyPath) < 1 {
 		// app needs key and cert to do SSL
 		er2 := &AppError{
 			Id:      ErrTLSNil,
 			Message: "Config TLSCertificatePath or TLSKeyPath is null. Cannot listen to TLS connections.",
 		}
-		return er2
+		app.mainChan <- er2
+		return
 	}
-	return http.ListenAndServeTLS(app.Config.HostAddrTLS, app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
-}
-
-func (app *App) ListenAll() error {
-	onceBody := func() {
-		app.loadAll()
-	}
-	once_app.Do(onceBody)
-	go func() {
-		app.Listen()
-	}()
-	go func() {
-		app.ListenTLS()
-	}()
-	ch := make(chan bool)
-	<-ch
-	return nil
+	er3 := http.ListenAndServeTLS(app.Config.HostAddrTLS, app.Config.TLSCertificatePath, app.Config.TLSKeyPath, app.entryHTTPS)
+	app.mainChan <- er3
 }
 
 func (a *App) RegisterController(c IController) {
@@ -244,6 +271,10 @@ func (app *App) loadConfig() {
 	__panic(err)
 	err = json.Unmarshal(bytes, &app.Config)
 	__panic(err)
+	// set default views extension if none
+	if len(app.Config.ViewsExtensions) < 1 {
+		app.Config.ViewsExtensions = []string{".tpl", ".html"}
+	}
 	//
 	// LOAD Routes.json
 	//
@@ -290,14 +321,20 @@ func (app *App) loadConfig() {
 }
 
 func (a *App) loadTemplates() {
-	log.Println("loading template files (.tpl)")
+	log.Println("loading template files (" + strings.Join(a.Config.ViewsExtensions, ",") + ")")
 	a.templateMap = make(map[string]*templateInfo, 0)
 	fdir := FormatPath(a.Config.ViewsFolderPath)
 	bytesLoaded := int(0)
 	langs := i18ngo.GetLanguageCodes()
 	vPath := func(path string, f os.FileInfo, err error) error {
-		//if strings.LastIndex(path, ".tpl") == len(path)-4 {
-		if filepath.Ext(path) == ".tpl" || filepath.Ext(path) == ".html" {
+		ext := filepath.Ext(path)
+		extensionIsValid := false
+		for _, v := range a.Config.ViewsExtensions {
+			if v == ext {
+				extensionIsValid = true
+			}
+		}
+		if extensionIsValid {
 			bytes, _ := ioutil.ReadFile(path)
 			if len(a.Config.LocalePath) < 1 {
 				tplInfo := &templateInfo{

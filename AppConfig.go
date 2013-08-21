@@ -25,6 +25,7 @@ type AppConfig struct {
 	// Paths
 	RoutesConfigPath string
 	ViewsFolderPath  string
+	ViewsExtensions  []string // .html, .tpl
 	PublicFolderPath string
 }
 
@@ -55,5 +56,6 @@ func (a *AppConfig) ParseEnv() {
 	// Paths
 	a.RoutesConfigPath = re.ReplaceAllStringFunc(a.RoutesConfigPath, replacer)
 	a.ViewsFolderPath = re.ReplaceAllStringFunc(a.ViewsFolderPath, replacer)
+	//TODO: maybe parse env vars on views extensions
 	a.PublicFolderPath = re.ReplaceAllStringFunc(a.PublicFolderPath, replacer)
 }
