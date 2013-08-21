@@ -2,3 +2,9 @@
 *.o
 *.a
 *.so
+
+.DS_Store
+.Spotlight-V100
+.Trashes
+ethumbs.db
+thumbs.db
