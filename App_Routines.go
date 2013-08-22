@@ -24,9 +24,10 @@ func (app *App) runRoutines() {
 		return
 	}
 	app.didRunRoutines = true
-	go func() {
-		app.routineTemplateCacheMaitenance()
-	}()
+	// commenting for now since the template fix routine isn't done
+	//go func() {
+	//	app.routineTemplateCacheMaitenance()
+	//}()
 }
 
 func (app *App) routineTemplateCacheMaitenance() {
@@ -40,6 +41,7 @@ func (app *App) routineTemplateCacheMaitenance() {
 			if err == nil {
 				if info.ModTime().After(v.lastUpdate) {
 					log.Println(k + " IS MODIFIED")
+					//TODO: re cache it!
 				}
 			}
 		}
