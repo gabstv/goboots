@@ -371,7 +371,9 @@ func (a *App) loadTemplates() {
 }
 
 func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) {
-	niceurl, _ := url.QueryUnescape(r.URL.String())
+	//niceurl, _ := url.QueryUnescape(r.URL.String())
+	niceurl := r.URL.Opaque
+	log.Println("requested " + niceurl)
 	// after all routes are dealt with
 	//TODO: have an option to have these files in memory
 	fdir := FormatPath(app.Config.PublicFolderPath + "/" + niceurl)
