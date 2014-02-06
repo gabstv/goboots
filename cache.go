@@ -203,3 +203,11 @@ func (c *GenericCacheCollection) InvalidateCache(name string) {
 	cache := c.GetCache(name)
 	cache.IsValid = false
 }
+
+type ISessionDBEngine interface {
+	GetSession(sid string) (*Session, error)
+	PutSession(session *Session) error
+	NewSession(session *Session) error
+	RemoveSession(session *Session) error
+	Close()
+}

@@ -74,7 +74,9 @@ func (m *Model) FindOne(input interface{}, output IModel, omitEmpty bool) error 
 			}
 		}
 	}
-	return DB.C(output.GetCollectionName()).Find(mp).One(output)
+	//return DB.C(output.GetCollectionName()).Find(mp).One(output)
+	//TODO: remove this dependency
+	return nil
 }
 
 func (m *Model) Query(input IModel, omitEmpty bool) *M2 {
@@ -101,16 +103,20 @@ func (m *M2) Where(name string, signal string, value interface{}) *M2 {
 
 func (m *M2) One(result IModel) error {
 	mm := *m
-	cname, _ := mm["_8cname9__"].(string)
+	//cname, _ := mm["_8cname9__"].(string)
 	delete(mm, "_8cname9__")
-	return DB.C(cname).Find(mm).One(result)
+	//return DB.C(cname).Find(mm).One(result)
+	//TODO: remove dependency
+	return nil
 }
 
 func (m *M2) All(result interface{}) error {
 	mm := *m
-	cname, _ := mm["_8cname9__"].(string)
+	//cname, _ := mm["_8cname9__"].(string)
 	delete(mm, "_8cname9__")
-	return DB.C(cname).Find(mm).All(result)
+	//return DB.C(cname).Find(mm).All(result)
+	//TODO: remove dependency
+	return nil
 }
 
 func isZero(v reflect.Value) bool {

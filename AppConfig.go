@@ -5,6 +5,15 @@ import (
 	"regexp"
 )
 
+type DatabaseConfig struct {
+	Name       string
+	Connection string
+	Host       string
+	Database   string
+	User       string
+	Password   string
+}
+
 type AppConfig struct {
 	Name            string
 	Version         string
@@ -12,6 +21,8 @@ type AppConfig struct {
 	HostAddrTLS     string
 	MongoDbs        string
 	Database        string
+	Databases       map[string]DatabaseConfig
+	SessionDb       interface{}
 	Salt            string
 	LocalePath      string
 	DefaultLanguage string
@@ -24,6 +35,7 @@ type AppConfig struct {
 
 	// Paths
 	RoutesConfigPath string
+	CachePath        string
 	ViewsFolderPath  string
 	ViewsExtensions  []string // .html, .tpl
 	PublicFolderPath string
@@ -55,6 +67,7 @@ func (a *AppConfig) ParseEnv() {
 
 	// Paths
 	a.RoutesConfigPath = re.ReplaceAllStringFunc(a.RoutesConfigPath, replacer)
+	a.CachePath = re.ReplaceAllStringFunc(a.CachePath, replacer)
 	a.ViewsFolderPath = re.ReplaceAllStringFunc(a.ViewsFolderPath, replacer)
 	//TODO: maybe parse env vars on views extensions
 	a.PublicFolderPath = re.ReplaceAllStringFunc(a.PublicFolderPath, replacer)

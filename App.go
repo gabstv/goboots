@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gabstv/i18ngo"
 	"io/ioutil"
-	"labix.org/v2/mgo"
 	"log"
 	"math/rand"
 	"net/http"
@@ -20,7 +19,6 @@ import (
 )
 
 var (
-	DB       *mgo.Database
 	APP      *App
 	once_app sync.Once
 )
@@ -30,8 +28,6 @@ type App struct {
 	AppConfigPath string
 	Config        AppConfig
 	Routes        []Route
-	DbSession     *mgo.Session
-	Db            *mgo.Database
 	ByteCaches    *ByteCacheCollection
 	SessionCache  *SessionCacheCollection
 	GenericCaches *GenericCacheCollection
@@ -79,7 +75,6 @@ func (app *App) Listen() error {
 		app.loadAll()
 	}
 	once_app.Do(onceBody)
-	defer app.DbSession.Close()
 	go func() {
 		app.listen()
 	}()
@@ -87,6 +82,9 @@ func (app *App) Listen() error {
 		app.listenTLS()
 	}()
 	app.runRoutines()
+
+	defer CloseSessionStorage()
+
 	var err error
 	err = <-app.mainChan
 	return err
@@ -220,22 +218,11 @@ func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
 }
 
 func (app *App) loadAll() {
+	APP = app
 	app.entryHTTP = &appHTTP{}
 	app.entryHTTPS = &appHTTPS{}
 	app.loadConfig()
-	app.loadMongo()
 	app.loadTemplates()
-}
-
-func (app *App) loadMongo() {
-	var err error
-	app.DbSession, err = mgo.Dial(app.Config.MongoDbs)
-	__panic(err)
-	// Optional -> switch the session to a monotonic behavior
-	app.DbSession.SetMode(mgo.Monotonic, true)
-	app.Db = app.DbSession.DB(app.Config.Database)
-	DB = app.Db
-	APP = app
 }
 
 func (app *App) loadConfig() {

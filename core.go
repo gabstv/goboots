@@ -2,9 +2,9 @@ package goboots
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/gabstv/i18ngo"
-	"labix.org/v2/mgo/bson"
 	"log"
 	"math/rand"
 	"net/http"
@@ -21,6 +21,49 @@ const (
 	// TLS
 	ErrTLSNil = 100
 )
+
+var (
+	sessionDbs   map[string]ISessionDBEngine
+	curSessionDb ISessionDBEngine
+)
+
+func RegisterSessionStorageDriver(name string, engine ISessionDBEngine) {
+	if sessionDbs == nil {
+		sessionDbs = make(map[string]ISessionDBEngine, 0)
+	}
+	sessionDbs[name] = engine
+}
+
+func InitSessionStorage(driver string) error {
+	if sessionDbs == nil {
+		return errors.New("No session storage registered.")
+	}
+	if _, ok := sessionDbs[driver]; !ok {
+		return errors.New("The session storage driver " + driver + " does not exist.")
+	}
+	curSessionDb = sessionDbs[driver]
+	return nil
+}
+
+func CloseSessionStorage() {
+	if curSessionDb != nil {
+		curSessionDb.Close()
+	}
+}
+
+func initAnySessionStorage() {
+	if curSessionDb != nil {
+		return
+	}
+	if sessionDbs == nil {
+		//TODO: should panic
+		return
+	}
+	for _, v := range sessionDbs {
+		curSessionDb = v
+		break
+	}
+}
 
 type AppError struct {
 	Id      int
@@ -108,6 +151,7 @@ func (s *Session) GetStringD(key string, defaultValue string) string {
 }
 
 func GetSession(w http.ResponseWriter, r *http.Request) *Session {
+	initAnySessionStorage()
 	var cookie *http.Cookie
 	var sid string
 	var err error
@@ -126,9 +170,8 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 				mu_session.Unlock()
 				return msession
 			}
-			// get from mongo!
-			msession = &Session{}
-			err = DB.C("goboots_sessid").Find(bson.M{"sid": sid}).One(&msession)
+			// get from a saved location
+			msession, err = curSessionDb.GetSession(sid)
 			if err == nil {
 				APP.SessionCache.SetCache(msession)
 				return msession
@@ -155,7 +198,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 		Data: make(map[string]interface{}),
 		Time: time.Now(),
 	}
-	err = DB.C("goboots_sessid").Insert(session)
+	err = curSessionDb.NewSession(session)
 	__panic(err)
 	SetCookieAdv(w, "goboots_sessid", sid, "/", "", time.Now().AddDate(0, 1, 0), 0, false, true)
 	return session
@@ -199,11 +242,11 @@ func SetUserLang(w http.ResponseWriter, r *http.Request, langcode string) {
 }
 
 func FlushSession(s *Session) error {
-	return DB.C("goboots_sessid").Update(bson.M{"sid": s.SID}, s)
+	return curSessionDb.PutSession(s)
 }
 
 func DestroySession(w http.ResponseWriter, r *http.Request, s *Session) {
-	DB.C("goboots_sessid").Remove(bson.M{"sid": s.SID})
+	curSessionDb.RemoveSession(s)
 	APP.SessionCache.DeleteCache(s.SID)
 	SetCookieAdv(w, "goboots_sessid", "", "/", "", time.Now(), 1, false, true)
 }
