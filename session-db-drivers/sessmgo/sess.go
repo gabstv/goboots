@@ -63,7 +63,7 @@ func (m *MongoDBSession) connect() error {
 		connstr = goboots.APP.Config.Databases[str].Connection
 		db = goboots.APP.Config.Databases[str].Database
 	} else {
-		mmap := goboots.APP.Config.Databases[str].(map[string]string)
+		mmap := goboots.APP.Config.SessionDb.(map[string]string)
 		connstr = mmap["Connection"]
 		db = mmap["Database"]
 	}
