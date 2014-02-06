@@ -41,10 +41,18 @@ type env struct {
 	form       map[string][]string
 }
 
+type ISession interface {
+	GetData() (string, map[string]interface{}, time.Time)
+}
+
 type Session struct {
 	SID  string
 	Data map[string]interface{}
 	Time time.Time
+}
+
+func (s *Session) GetData() (string, map[string]interface{}, time.Time) {
+	return s.SID, s.Data, s.Time
 }
 
 func (s *Session) Flush() {
