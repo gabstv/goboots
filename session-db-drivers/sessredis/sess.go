@@ -33,11 +33,11 @@ func (m *RedisDBSession) PutSession(session *goboots.Session) error {
 		}
 	}
 	b, _ := json.Marshal(session)
-	err := m.client.Set("goboots_sessid:"+sid, b)
+	err := m.client.Set("goboots_sessid:"+session.SID, b)
 	if err != nil {
 		return err
 	}
-	return m.client.Expire("goboots_sessid:"+sid, 60*60*24*60)
+	return m.client.Expire("goboots_sessid:"+session.SID, 60*60*24*60)
 }
 
 func (m *RedisDBSession) NewSession(session *goboots.Session) error {
@@ -45,7 +45,7 @@ func (m *RedisDBSession) NewSession(session *goboots.Session) error {
 }
 
 func (m *RedisDBSession) RemoveSession(session *goboots.Session) error {
-	_, err := m.client.Del("goboots_sessid:" + sid)
+	_, err := m.client.Del("goboots_sessid:" + session.SID)
 	return err
 }
 
@@ -66,7 +66,8 @@ func (m *RedisDBSession) connect() error {
 		host = goboots.APP.Config.Databases[str].Host
 		auth = goboots.APP.Config.Databases[str].Password
 		if len(goboots.APP.Config.Databases[str].Database) > 0 {
-			db = int(strconv.ParseInt(goboots.APP.Config.Databases[str].Database, 10, 32))
+			v, _ := strconv.ParseInt(goboots.APP.Config.Databases[str].Database, 10, 32)
+			db = int(v)
 		}
 	} else {
 		mmap := goboots.APP.Config.SessionDb.(map[string]string)
@@ -74,7 +75,8 @@ func (m *RedisDBSession) connect() error {
 		host = mmap["Host"]
 		auth, _ = mmap["Password"]
 		if _, ok := mmap["Database"]; ok {
-			db = int(strconv.ParseInt(mmap["Database"], 10, 32))
+			v, _ := strconv.ParseInt(mmap["Database"], 10, 32)
+			db = int(v)
 		}
 	}
 
