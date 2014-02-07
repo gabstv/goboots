@@ -37,7 +37,8 @@ func (m *RedisDBSession) PutSession(session *goboots.Session) error {
 	if err != nil {
 		return err
 	}
-	return m.client.Expire("goboots_sessid:"+session.SID, 60*60*24*60)
+	_, err = m.client.Expire("goboots_sessid:"+session.SID, 60*60*24*60)
+	return err
 }
 
 func (m *RedisDBSession) NewSession(session *goboots.Session) error {
