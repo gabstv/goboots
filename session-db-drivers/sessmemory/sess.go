@@ -40,7 +40,7 @@ func (m *MemoryDbSession) RemoveSession(session *goboots.Session) error {
 
 func (m *MemoryDbSession) getSessionWorker() {
 	for m.connected {
-		sid := <-gcsid
+		sid := <-m.gcsid
 		m.gcs <- m.sessions[sid]
 	}
 }
@@ -64,10 +64,6 @@ func (m *MemoryDbSession) connect() error {
 		return nil
 	}
 	m.sessions = make(map[string]*goboots.Session, 0)
-	m.gcsid = new(chan string)
-	m.gcs = new(chan *goboots.Session)
-	m.scs = new(chan *goboots.Session)
-	m.rcs = new(chan *goboots.Session)
 	m.connected = true
 	go m.getSessionWorker()
 	go m.setSessionWorker()
