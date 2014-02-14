@@ -74,3 +74,7 @@ func (m *MemoryDbSession) connect() error {
 	go m.delSessionWorker()
 	return nil
 }
+
+func init() {
+	goboots.RegisterSessionStorageDriver("sessmemory", &MemoryDbSession{})
+}
