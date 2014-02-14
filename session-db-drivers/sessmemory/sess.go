@@ -38,6 +38,10 @@ func (m *MemoryDbSession) RemoveSession(session *goboots.Session) error {
 	return nil
 }
 
+func (m *MemoryDbSession) Close() {
+	m.connected = false
+}
+
 func (m *MemoryDbSession) getSessionWorker() {
 	for m.connected {
 		sid := <-m.gcsid
