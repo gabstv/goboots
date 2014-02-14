@@ -1,0 +1,76 @@
+package sessmemory
+
+import (
+	"github.com/gabstv/goboots"
+)
+
+type MemoryDbSession struct {
+	gcsid     chan string
+	gcs       chan *goboots.Session
+	scs       chan *goboots.Session
+	rcs       chan *goboots.Session
+	sessions  map[string]*goboots.Session
+	connected bool
+}
+
+func (m *MemoryDbSession) GetSession(sid string) (*goboots.Session, error) {
+	m.connect()
+	m.gcsid <- sid
+	return <-m.gcs, nil
+}
+
+func (m *MemoryDbSession) PutSession(session *goboots.Session) error {
+	m.connect()
+	m.scs <- session
+	return nil
+}
+
+func (m *MemoryDbSession) NewSession(session *goboots.Session) error {
+	return m.PutSession(session)
+}
+
+func (m *MemoryDbSession) RemoveSession(session *goboots.Session) error {
+	if session == nil {
+		return nil
+	}
+	m.connect()
+	m.rcs <- session
+	return nil
+}
+
+func (m *MemoryDbSession) getSessionWorker() {
+	for m.connected {
+		sid := <-gcsid
+		m.gcs <- m.sessions[sid]
+	}
+}
+
+func (m *MemoryDbSession) setSessionWorker() {
+	for m.connected {
+		session := <-m.scs
+		m.sessions[session.SID] = session
+	}
+}
+
+func (m *MemoryDbSession) delSessionWorker() {
+	for m.connected {
+		session := <-m.rcs
+		delete(m.sessions, session.SID)
+	}
+}
+
+func (m *MemoryDbSession) connect() error {
+	if m.connected {
+		return nil
+	}
+	m.sessions = make(map[string]*goboots.Session, 0)
+	m.gcsid = new(chan string)
+	m.gcs = new(chan *goboots.Session)
+	m.scs = new(chan *goboots.Session)
+	m.rcs = new(chan *goboots.Session)
+	m.connected = true
+	go m.getSessionWorker()
+	go m.setSessionWorker()
+	go m.delSessionWorker()
+	return nil
+}
