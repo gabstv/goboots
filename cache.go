@@ -18,18 +18,6 @@ type ByteCache struct {
 	IsValid    bool
 }
 
-type SessionCache struct {
-	SessionID     string
-	SessionObject *Session
-	LastUpdate    time.Time
-	Expires       time.Time
-}
-
-func (c *SessionCache) UpdateTime() {
-	c.LastUpdate = time.Now()
-	c.Expires = c.LastUpdate.Add(time.Hour)
-}
-
 type GenericCache struct {
 	Name       string
 	Content    interface{}
@@ -42,11 +30,6 @@ type ByteCacheCollection struct {
 	maxTimeSpan time.Duration
 }
 
-type SessionCacheCollection struct {
-	caches      map[string]*SessionCache
-	maxTimeSpan time.Duration
-}
-
 type GenericCacheCollection struct {
 	caches      map[string]*GenericCache
 	maxTimeSpan time.Duration
@@ -55,13 +38,6 @@ type GenericCacheCollection struct {
 func NewByteCacheCollection() *ByteCacheCollection {
 	return &ByteCacheCollection{
 		caches:      make(map[string]*ByteCache, 0),
-		maxTimeSpan: time.Hour,
-	}
-}
-
-func NewSessionCacheCollection() *SessionCacheCollection {
-	return &SessionCacheCollection{
-		caches:      make(map[string]*SessionCache, 0),
 		maxTimeSpan: time.Hour,
 	}
 }
@@ -87,25 +63,6 @@ func (c *ByteCacheCollection) GetCache(name string) *ByteCache {
 	return val
 }
 
-func (c *SessionCacheCollection) GetCache(sessionID string) *SessionCache {
-	mu_session.Lock()
-	val, ok := c.caches[sessionID]
-	mu_session.Unlock()
-	if !ok {
-		return nil
-	}
-	return val
-}
-
-func (c *SessionCacheCollection) GetSession(sessionID string) *Session {
-	var cache *SessionCache
-	cache = c.GetCache(sessionID)
-	if cache == nil {
-		return nil
-	}
-	return cache.SessionObject
-}
-
 func (c *GenericCacheCollection) GetCache(name string) *GenericCache {
 	mu_genericcache.Lock()
 	val, ok := c.caches[name]
@@ -129,22 +86,6 @@ func (c *ByteCacheCollection) SetCache(name string, data []byte) {
 	mu_bytecache.Unlock()
 }
 
-func (c *SessionCacheCollection) SetCache(session *Session) {
-	var cache *SessionCache
-	cache = c.GetCache(session.SID)
-	if cache == nil {
-		mu_session.Lock()
-		cache = &SessionCache{
-			SessionID:     session.SID,
-			SessionObject: session,
-			LastUpdate:    time.Now(),
-			Expires:       time.Now().Add(time.Hour),
-		}
-		c.caches[session.SID] = cache
-		mu_session.Unlock()
-	}
-}
-
 func (c *GenericCacheCollection) SetCache(name string, data interface{}) {
 	cache := c.GetCache(name)
 	mu_genericcache.Lock()
@@ -158,12 +99,6 @@ func (c *ByteCacheCollection) DeleteCache(name string) {
 	mu_bytecache.Lock()
 	delete(c.caches, name)
 	mu_bytecache.Unlock()
-}
-
-func (c *SessionCacheCollection) DeleteCache(sessionID string) {
-	mu_session.Lock()
-	delete(c.caches, sessionID)
-	mu_session.Unlock()
 }
 
 func (c *GenericCacheCollection) DeleteCache(name string) {

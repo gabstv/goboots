@@ -29,7 +29,6 @@ type App struct {
 	Config        AppConfig
 	Routes        []Route
 	ByteCaches    *ByteCacheCollection
-	SessionCache  *SessionCacheCollection
 	GenericCaches *GenericCacheCollection
 	Random        *rand.Rand
 	// "private"
@@ -303,7 +302,6 @@ func (app *App) loadConfig() {
 	// Setup cache
 	//
 	app.ByteCaches = NewByteCacheCollection()
-	app.SessionCache = NewSessionCacheCollection()
 	app.GenericCaches = NewGenericCacheCollection()
 }
 

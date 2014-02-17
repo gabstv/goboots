@@ -161,19 +161,9 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 		sid = cookie.Value
 		if _validateSidString(sid) {
 			var msession *Session
-			// try get from cache
-			msession = APP.SessionCache.GetSession(sid)
-			if msession != nil {
-				cache := APP.SessionCache.GetCache(sid)
-				mu_session.Lock()
-				cache.UpdateTime()
-				mu_session.Unlock()
-				return msession
-			}
 			// get from a saved location
 			msession, err = curSessionDb.GetSession(sid)
 			if err == nil {
-				APP.SessionCache.SetCache(msession)
 				return msession
 			}
 			fmt.Printf("SESSION ERROR :( [%s] %s\n", sid, err.Error())
@@ -189,9 +179,6 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 		uuid[i] = byte(rand.Intn(255))
 	}
 	// secrets
-	//uuid[6] = (4 << 4) | (uuid[6] & 15)
-	//uuid[8] = (2 << 4) | (uuid[8] & 15)
-	//sid = fmt.Sprintf("%x%x%x%x%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 	sid = fmt.Sprintf("%x", uuid)
 	log.Println(sid)
 	session := &Session{
@@ -248,7 +235,6 @@ func FlushSession(s *Session) error {
 
 func DestroySession(w http.ResponseWriter, r *http.Request, s *Session) {
 	curSessionDb.RemoveSession(s)
-	APP.SessionCache.DeleteCache(s.SID)
 	SetCookieAdv(w, "goboots_sessid", "", "/", "", time.Now(), 1, false, true)
 }
 
@@ -264,12 +250,6 @@ func _validateSidString(sid string) bool {
 	}
 	return true
 }
-
-//func _parseCookies(r *http.Request) (map[string]string, error) {
-//cookies := make(map[string]string)
-//c := r.Cookies()
-//c[0].
-//}
 
 type templateInfo struct {
 	path       string
