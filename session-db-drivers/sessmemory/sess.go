@@ -1,6 +1,7 @@
 package sessmemory
 
 import (
+	"errors"
 	"github.com/gabstv/goboots"
 )
 
@@ -16,7 +17,14 @@ type MemoryDbSession struct {
 func (m *MemoryDbSession) GetSession(sid string) (*goboots.Session, error) {
 	m.connect()
 	m.gcsid <- sid
-	return <-m.gcs, nil
+
+	sess := <-m.gcs
+
+	if sess == nil {
+		return nil, errors.New("Not found.")
+	}
+
+	return sess, nil
 }
 
 func (m *MemoryDbSession) PutSession(session *goboots.Session) error {
@@ -67,6 +75,12 @@ func (m *MemoryDbSession) connect() error {
 	if m.connected {
 		return nil
 	}
+
+	m.gcsid = make(chan string)
+	m.gcs = make(chan *goboots.Session)
+	m.scs = make(chan *goboots.Session)
+	m.rcs = make(chan *goboots.Session)
+
 	m.sessions = make(map[string]*goboots.Session, 0)
 	m.connected = true
 	go m.getSessionWorker()

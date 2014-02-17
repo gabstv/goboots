@@ -193,6 +193,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 	//uuid[8] = (2 << 4) | (uuid[8] & 15)
 	//sid = fmt.Sprintf("%x%x%x%x%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 	sid = fmt.Sprintf("%x", uuid)
+	log.Println(sid)
 	session := &Session{
 		SID:  sid,
 		Data: make(map[string]interface{}),
