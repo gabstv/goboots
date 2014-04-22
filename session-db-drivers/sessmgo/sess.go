@@ -56,16 +56,20 @@ func (m *MongoDBSession) Close() {
 }
 
 func (m *MongoDBSession) connect() error {
-	var connstr, db string
+	var connstr, db, un, pw string
 	var err error
 	str, ok := goboots.APP.Config.SessionDb.(string)
 	if ok {
 		connstr = goboots.APP.Config.Databases[str].Connection
 		db = goboots.APP.Config.Databases[str].Database
+		un = goboots.APP.Config.Databases[str].User
+		pw = goboots.APP.Config.Databases[str].Password
 	} else {
 		mmap := goboots.APP.Config.SessionDb.(map[string]string)
 		connstr = mmap["Connection"]
 		db = mmap["Database"]
+		un = mmap["User"]
+		pw = mmap["Password"]
 	}
 	m.ms, err = mgo.Dial(connstr)
 	if err != nil {
@@ -73,6 +77,12 @@ func (m *MongoDBSession) connect() error {
 	}
 	m.ms.SetMode(mgo.Monotonic, true)
 	m.mdb = m.ms.DB(db)
+	if len(un) > 0 {
+		err = m.mdb.Login(un, pw)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
