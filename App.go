@@ -224,6 +224,30 @@ func (app *App) loadAll() {
 	app.loadTemplates()
 }
 
+func (app *App) LoadConfigFile() error {
+	if len(app.AppConfigPath) < 1 {
+		// try to get appconfig path from env
+		app.AppConfigPath = os.Getenv("APPCONFIGPATH")
+		if len(app.AppConfigPath) < 1 {
+			app.AppConfigPath = os.Getenv("APPCONFIG")
+			if len(app.AppConfigPath) < 1 {
+				// try to get $cwd/AppConfig.json
+				_, err := os.Stat("AppConfig.json")
+				if os.IsNotExist(err) {
+					return err
+				}
+				app.AppConfigPath = "AppConfig.json"
+			}
+		}
+	}
+	dir := FormatPath(app.AppConfigPath)
+	bytes, err := ioutil.ReadFile(dir)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bytes, &app.Config)
+}
+
 func (app *App) loadConfig() {
 	// setup Random
 	src := rand.NewSource(time.Now().Unix())
@@ -236,26 +260,7 @@ func (app *App) loadConfig() {
 	//
 	// LOAD AppConfig.json
 	//
-	if len(app.AppConfigPath) < 1 {
-		// try to get appconfig path from env
-		app.AppConfigPath = os.Getenv("APPCONFIGPATH")
-		if len(app.AppConfigPath) < 1 {
-			app.AppConfigPath = os.Getenv("APPCONFIG")
-			if len(app.AppConfigPath) < 1 {
-				// try to get $cwd/AppConfig.json
-				_, err := os.Stat("AppConfig.json")
-				if os.IsNotExist(err) {
-					__panic(err)
-					return
-				}
-				app.AppConfigPath = "AppConfig.json"
-			}
-		}
-	}
-	dir = FormatPath(app.AppConfigPath)
-	bytes, err = ioutil.ReadFile(dir)
-	__panic(err)
-	err = json.Unmarshal(bytes, &app.Config)
+	err = app.LoadConfigFile()
 	__panic(err)
 	// set default views extension if none
 	if len(app.Config.ViewsExtensions) < 1 {
