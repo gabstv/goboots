@@ -150,6 +150,10 @@ func (s *Session) GetStringD(key string, defaultValue string) string {
 	return reflect.ValueOf(iface).String()
 }
 
+func (s *Session) Expire(w http.ResponseWriter, t time.Time) {
+	SetCookieAdv(w, "goboots_sessid", s.SID, "/", "", t, 0, false, true)
+}
+
 func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 	initAnySessionStorage()
 	var cookie *http.Cookie
