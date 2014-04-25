@@ -50,8 +50,15 @@ type appHTTPS struct {
 func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if APP.Config.TLSRedirect {
 		// redirect to https
-		//TODO: redirect it properly
-		log.Println("TODO: redirect to https")
+		h0 := strings.Split(r.Host, ":")
+		h1 := strings.Split(APP.Config.HostAddrTLS, ":")
+		if len(h1) > 1 {
+			if h1[1] != "443" {
+				h0[0] = h0[0] + ":" + h1[1]
+			}
+		}
+		http.Redirect(w, r, "https://"+h0[0]+r.URL.String(), 301)
+		return
 	}
 	APP.ServeHTTP(w, r)
 }
