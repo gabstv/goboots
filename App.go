@@ -52,12 +52,18 @@ func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// redirect to https
 		h0 := strings.Split(r.Host, ":")
 		h1 := strings.Split(APP.Config.HostAddrTLS, ":")
+		h0o := h0[0]
 		if len(h1) > 1 {
 			if h1[1] != "443" {
 				h0[0] = h0[0] + ":" + h1[1]
 			}
 		}
-		http.Redirect(w, r, "https://"+h0[0]+r.URL.String(), 301)
+		urls := r.URL.String()
+		if strings.Contains(urls, h0o) {
+			urls = strings.Replace(urls, h0o, "", 1)
+		}
+		log.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
+		http.Redirect(w, r, "https://"+h0[0]+urls, 301)
 		return
 	}
 	APP.ServeHTTP(w, r)
@@ -370,7 +376,8 @@ func (a *App) loadTemplates() {
 func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) {
 	//niceurl, _ := url.QueryUnescape(r.URL.String())
 	niceurl := r.URL.Path
-	log.Println("requested " + niceurl)
+	//TODO: place that into access log
+	//log.Println("requested " + niceurl)
 	// after all routes are dealt with
 	//TODO: have an option to have these files in memory
 	fdir := FormatPath(app.Config.PublicFolderPath + "/" + niceurl)
@@ -404,6 +411,9 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			// you may want to run something before all the other methods, this is where you do it
 			prec := c.PreFilter(w, r, urlbits)
 			if prec != nil {
+				if v9, ok9 := prec.(bool); ok9 && !v9 {
+					return true
+				}
 				c.Render(w, r, prec)
 				return true
 			}
