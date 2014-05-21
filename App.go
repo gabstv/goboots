@@ -405,7 +405,27 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			c := app.controllerMap[v.Controller]
 			if c == nil {
 				//TODO: display page error instead of panic
-				log.Fatalf("Controller '%s' is not registered!", v.Controller)
+				log.Fatalf("Controller '%s' is not registered!\n", v.Controller)
+			}
+			if v.RedirectTLS {
+				if r.TLS == nil {
+					// redirect to https
+					h0 := strings.Split(r.Host, ":")
+					h1 := strings.Split(APP.Config.HostAddrTLS, ":")
+					h0o := h0[0]
+					if len(h1) > 1 {
+						if h1[1] != "443" {
+							h0[0] = h0[0] + ":" + h1[1]
+						}
+					}
+					urls := r.URL.String()
+					if strings.Contains(urls, h0o) {
+						urls = strings.Replace(urls, h0o, "", 1)
+					}
+					log.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
+					http.Redirect(w, r, "https://"+h0[0]+urls, 302)
+					return true
+				}
 			}
 			// run pre filter
 			// you may want to run something before all the other methods, this is where you do it

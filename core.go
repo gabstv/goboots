@@ -184,7 +184,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 	}
 	// secrets
 	sid = fmt.Sprintf("%x", uuid)
-	log.Println(sid)
+
 	session := &Session{
 		SID:  sid,
 		Data: make(map[string]interface{}),

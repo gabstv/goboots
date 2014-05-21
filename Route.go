@@ -6,10 +6,11 @@ import (
 )
 
 type Route struct {
-	Path       string
-	Controller string
-	Method     string
-	_t         byte
+	Path        string
+	Controller  string
+	Method      string
+	RedirectTLS bool
+	_t          byte
 }
 
 func (route *Route) IsMatch(url string) bool {
