@@ -19,7 +19,6 @@ import (
 )
 
 var (
-	APP      *App
 	once_app sync.Once
 )
 
@@ -42,16 +41,18 @@ type App struct {
 }
 
 type appHTTP struct {
+	app *App
 }
 
 type appHTTPS struct {
+	app *App
 }
 
 func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if APP.Config.TLSRedirect {
+	if a.app.Config.TLSRedirect {
 		// redirect to https
 		h0 := strings.Split(r.Host, ":")
-		h1 := strings.Split(APP.Config.HostAddrTLS, ":")
+		h1 := strings.Split(a.app.Config.HostAddrTLS, ":")
 		h0o := h0[0]
 		if len(h1) > 1 {
 			if h1[1] != "443" {
@@ -66,11 +67,11 @@ func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "https://"+h0[0]+urls, 301)
 		return
 	}
-	APP.ServeHTTP(w, r)
+	a.ServeHTTP(w, r)
 }
 
 func (a *appHTTPS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	APP.ServeHTTP(w, r)
+	a.ServeHTTP(w, r)
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -215,12 +216,11 @@ func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
 	errorLayout.Execute(w, page)
 }
 
-func (app *App) loadAll() {
-	APP = app
-	app.entryHTTP = &appHTTP{}
-	app.entryHTTPS = &appHTTPS{}
-	app.loadConfig()
-	app.loadTemplates()
+func (a *App) loadAll() {
+	a.entryHTTP = &appHTTP{a}
+	a.entryHTTPS = &appHTTPS{a}
+	a.loadConfig()
+	a.loadTemplates()
 }
 
 func (app *App) LoadConfigFile() error {
@@ -397,7 +397,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				if r.TLS == nil {
 					// redirect to https
 					h0 := strings.Split(r.Host, ":")
-					h1 := strings.Split(APP.Config.HostAddrTLS, ":")
+					h1 := strings.Split(app.Config.HostAddrTLS, ":")
 					h0o := h0[0]
 					if len(h1) > 1 {
 						if h1[1] != "443" {

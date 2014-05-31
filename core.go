@@ -34,7 +34,7 @@ func RegisterSessionStorageDriver(name string, engine ISessionDBEngine) {
 	sessionDbs[name] = engine
 }
 
-func InitSessionStorage(driver string) error {
+func (app *App) InitSessionStorage(driver string) error {
 	if sessionDbs == nil {
 		return errors.New("No session storage registered.")
 	}
@@ -42,6 +42,7 @@ func InitSessionStorage(driver string) error {
 		return errors.New("The session storage driver " + driver + " does not exist.")
 	}
 	curSessionDb = sessionDbs[driver]
+	curSessionDb.SetApp(app)
 	return nil
 }
 

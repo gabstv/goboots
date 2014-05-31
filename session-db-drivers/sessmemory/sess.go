@@ -12,6 +12,11 @@ type MemoryDbSession struct {
 	rcs       chan *goboots.Session
 	sessions  map[string]*goboots.Session
 	connected bool
+	app       *goboots.App
+}
+
+func (m *MemoryDbSession) SetApp(app *goboots.App) {
+	m.app = app
 }
 
 func (m *MemoryDbSession) GetSession(sid string) (*goboots.Session, error) {

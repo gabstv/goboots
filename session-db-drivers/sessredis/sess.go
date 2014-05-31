@@ -9,6 +9,11 @@ import (
 
 type RedisDBSession struct {
 	client *redis.Client
+	app    *goboots.App
+}
+
+func (m *RedisDBSession) SetApp(app *goboots.App) {
+	m.app = app
 }
 
 func (m *RedisDBSession) GetSession(sid string) (*goboots.Session, error) {
@@ -62,16 +67,16 @@ func (m *RedisDBSession) connect() error {
 		m.client = &redis.Client{}
 	}
 
-	str, ok := goboots.APP.Config.SessionDb.(string)
+	str, ok := m.app.Config.SessionDb.(string)
 	if ok {
-		host = goboots.APP.Config.Databases[str].Host
-		auth = goboots.APP.Config.Databases[str].Password
-		if len(goboots.APP.Config.Databases[str].Database) > 0 {
-			v, _ := strconv.ParseInt(goboots.APP.Config.Databases[str].Database, 10, 32)
+		host = m.app.Config.Databases[str].Host
+		auth = m.app.Config.Databases[str].Password
+		if len(m.app.Config.Databases[str].Database) > 0 {
+			v, _ := strconv.ParseInt(m.app.Config.Databases[str].Database, 10, 32)
 			db = int(v)
 		}
 	} else {
-		mmap := goboots.APP.Config.SessionDb.(map[string]string)
+		mmap := m.app.Config.SessionDb.(map[string]string)
 
 		host = mmap["Host"]
 		auth, _ = mmap["Password"]

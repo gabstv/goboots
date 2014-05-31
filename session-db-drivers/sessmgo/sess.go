@@ -9,6 +9,11 @@ import (
 type MongoDBSession struct {
 	ms  *mgo.Session
 	mdb *mgo.Database
+	app *goboots.App
+}
+
+func (m *MongoDBSession) SetApp(app *goboots.App) {
+	m.app = app
 }
 
 func (m *MongoDBSession) GetSession(sid string) (*goboots.Session, error) {
@@ -58,14 +63,14 @@ func (m *MongoDBSession) Close() {
 func (m *MongoDBSession) connect() error {
 	var connstr, db, un, pw string
 	var err error
-	str, ok := goboots.APP.Config.SessionDb.(string)
+	str, ok := m.app.Config.SessionDb.(string)
 	if ok {
-		connstr = goboots.APP.Config.Databases[str].Connection
-		db = goboots.APP.Config.Databases[str].Database
-		un = goboots.APP.Config.Databases[str].User
-		pw = goboots.APP.Config.Databases[str].Password
+		connstr = m.app.Config.Databases[str].Connection
+		db = m.app.Config.Databases[str].Database
+		un = m.app.Config.Databases[str].User
+		pw = m.app.Config.Databases[str].Password
 	} else {
-		mmap := goboots.APP.Config.SessionDb.(map[string]string)
+		mmap := m.app.Config.SessionDb.(map[string]string)
 		connstr = mmap["Connection"]
 		db = mmap["Database"]
 		un = mmap["User"]

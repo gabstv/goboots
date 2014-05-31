@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-var (
-	mu_session      sync.Mutex
-	mu_bytecache    sync.Mutex
-	mu_genericcache sync.Mutex
-)
-
 type ByteCache struct {
 	Name       string
 	Content    []byte
@@ -26,13 +20,15 @@ type GenericCache struct {
 }
 
 type ByteCacheCollection struct {
-	caches      map[string]*ByteCache
-	maxTimeSpan time.Duration
+	mu_bytecache sync.Mutex
+	caches       map[string]*ByteCache
+	maxTimeSpan  time.Duration
 }
 
 type GenericCacheCollection struct {
-	caches      map[string]*GenericCache
-	maxTimeSpan time.Duration
+	mu_genericcache sync.Mutex
+	caches          map[string]*GenericCache
+	maxTimeSpan     time.Duration
 }
 
 func NewByteCacheCollection() *ByteCacheCollection {
@@ -50,7 +46,7 @@ func NewGenericCacheCollection() *GenericCacheCollection {
 }
 
 func (c *ByteCacheCollection) GetCache(name string) *ByteCache {
-	mu_bytecache.Lock()
+	c.mu_bytecache.Lock()
 	val, ok := c.caches[name]
 	if !ok {
 		val = &ByteCache{
@@ -59,12 +55,12 @@ func (c *ByteCacheCollection) GetCache(name string) *ByteCache {
 		}
 		c.caches[name] = val
 	}
-	mu_bytecache.Unlock()
+	c.mu_bytecache.Unlock()
 	return val
 }
 
 func (c *GenericCacheCollection) GetCache(name string) *GenericCache {
-	mu_genericcache.Lock()
+	c.mu_genericcache.Lock()
 	val, ok := c.caches[name]
 	if !ok {
 		val = &GenericCache{
@@ -73,38 +69,38 @@ func (c *GenericCacheCollection) GetCache(name string) *GenericCache {
 		}
 		c.caches[name] = val
 	}
-	mu_genericcache.Unlock()
+	c.mu_genericcache.Unlock()
 	return val
 }
 
 func (c *ByteCacheCollection) SetCache(name string, data []byte) {
 	cache := c.GetCache(name)
-	mu_bytecache.Lock()
+	c.mu_bytecache.Lock()
 	cache.Content = data
 	cache.LastUpdate = time.Now()
 	cache.IsValid = true
-	mu_bytecache.Unlock()
+	c.mu_bytecache.Unlock()
 }
 
 func (c *GenericCacheCollection) SetCache(name string, data interface{}) {
 	cache := c.GetCache(name)
-	mu_genericcache.Lock()
+	c.mu_genericcache.Lock()
 	cache.Content = data
 	cache.LastUpdate = time.Now()
 	cache.IsValid = true
-	mu_genericcache.Unlock()
+	c.mu_genericcache.Unlock()
 }
 
 func (c *ByteCacheCollection) DeleteCache(name string) {
-	mu_bytecache.Lock()
+	c.mu_bytecache.Lock()
 	delete(c.caches, name)
-	mu_bytecache.Unlock()
+	c.mu_bytecache.Unlock()
 }
 
 func (c *GenericCacheCollection) DeleteCache(name string) {
-	mu_genericcache.Lock()
+	c.mu_genericcache.Lock()
 	delete(c.caches, name)
-	mu_genericcache.Unlock()
+	c.mu_genericcache.Unlock()
 }
 
 func (c *ByteCacheCollection) IsValid(name string) bool {
@@ -140,6 +136,7 @@ func (c *GenericCacheCollection) InvalidateCache(name string) {
 }
 
 type ISessionDBEngine interface {
+	SetApp(app *App)
 	GetSession(sid string) (*Session, error)
 	PutSession(session *Session) error
 	NewSession(session *Session) error
