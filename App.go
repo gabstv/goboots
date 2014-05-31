@@ -102,16 +102,6 @@ func (app *App) Listen() error {
 	return err
 }
 
-func (app *App) ListenAll() error {
-	log.Println("ListenAll() is deprecated. Please use Listen()")
-	return app.Listen()
-}
-
-func (app *App) ListenTLS() error {
-	log.Println("ListenTLS() is deprecated. Please use Listen()")
-	return app.Listen()
-}
-
 func (app *App) listen() {
 	onceBody := func() {
 		app.loadAll()
@@ -130,11 +120,7 @@ func (app *App) listenTLS() {
 	}
 	once_app.Do(onceBody)
 	if len(app.Config.HostAddrTLS) < 1 {
-		// make TLS optional (commented this)
-		//app.mainChan <- &AppError{
-		//	Id:      ErrTLSNil,
-		//	Message: "Config HostAddrTLS is null. Cannot listen to TLS connections.",
-		//}
+		//TODO: error is TLS needs to be enforced (add config option)
 		return
 	}
 	if len(app.Config.TLSCertificatePath) < 1 || len(app.Config.TLSKeyPath) < 1 {
