@@ -13,13 +13,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
-)
-
-var (
-	once_app sync.Once
 )
 
 type App struct {
@@ -38,6 +33,7 @@ type App struct {
 	entryHTTPS     *appHTTPS
 	didRunRoutines bool
 	mainChan       chan error
+	loadedAll      bool
 }
 
 type appHTTP struct {
@@ -84,10 +80,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) Listen() error {
 	app.mainChan = make(chan error)
-	onceBody := func() {
-		app.loadAll()
-	}
-	once_app.Do(onceBody)
+	app.loadAll()
 	go func() {
 		app.listen()
 	}()
@@ -104,10 +97,7 @@ func (app *App) Listen() error {
 }
 
 func (app *App) listen() {
-	onceBody := func() {
-		app.loadAll()
-	}
-	once_app.Do(onceBody)
+	app.loadAll()
 	if len(app.Config.HostAddr) < 1 {
 		return
 	}
@@ -116,10 +106,7 @@ func (app *App) listen() {
 }
 
 func (app *App) listenTLS() {
-	onceBody := func() {
-		app.loadAll()
-	}
-	once_app.Do(onceBody)
+	app.loadAll()
 	if len(app.Config.HostAddrTLS) < 1 {
 		//TODO: error is TLS needs to be enforced (add config option)
 		return
@@ -217,10 +204,20 @@ func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
 }
 
 func (a *App) loadAll() {
+	if a.loadedAll {
+		return
+	}
 	a.entryHTTP = &appHTTP{a}
 	a.entryHTTPS = &appHTTPS{a}
 	a.loadConfig()
 	a.loadTemplates()
+	// load routes if they were added statically
+	if controllers != nil {
+		for _, v := range controllers {
+			a.RegisterController(v)
+		}
+	}
+	a.loadedAll = true
 }
 
 func (app *App) LoadConfigFile() error {

@@ -25,7 +25,16 @@ const (
 var (
 	sessionDbs   map[string]ISessionDBEngine
 	curSessionDb ISessionDBEngine
+	controllers  []IController
 )
+
+func RegisterController(controller IController) {
+	//TODO: error if controller with same name exists!
+	if controllers == nil {
+		controllers = make([]IController, 0)
+	}
+	controllers = append(controllers, controller)
+}
 
 func RegisterSessionStorageDriver(name string, engine ISessionDBEngine) {
 	if sessionDbs == nil {
