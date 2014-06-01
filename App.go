@@ -63,14 +63,15 @@ func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "https://"+h0[0]+urls, 301)
 		return
 	}
-	a.ServeHTTP(w, r)
+	a.app.ServeHTTP(w, r)
 }
 
 func (a *appHTTPS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.ServeHTTP(w, r)
+	a.app.ServeHTTP(w, r)
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Println("R:", r.URL.String())
 	routed := app.enroute(w, r)
 	//if routes didn't find anything
 	if !routed {
