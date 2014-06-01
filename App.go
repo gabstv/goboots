@@ -207,16 +207,18 @@ func (a *App) loadAll() {
 	if a.loadedAll {
 		return
 	}
-	a.entryHTTP = &appHTTP{a}
-	a.entryHTTPS = &appHTTPS{a}
-	a.loadConfig()
-	a.loadTemplates()
+
 	// load routes if they were added statically
 	if controllers != nil {
 		for _, v := range controllers {
 			a.RegisterController(v)
 		}
 	}
+
+	a.entryHTTP = &appHTTP{a}
+	a.entryHTTPS = &appHTTPS{a}
+	a.loadConfig()
+	a.loadTemplates()
 	a.loadedAll = true
 }
 
