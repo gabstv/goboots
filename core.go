@@ -230,7 +230,9 @@ func GetUserLang(w http.ResponseWriter, r *http.Request) string {
 		}
 		if len(l) > 0 {
 			// just update the cookies
-			SetCookieSimple(w, "lang", l)
+			if w != nil {
+				SetCookieSimple(w, "lang", l)
+			}
 		} else {
 			l = i18ngo.GetDefaultLanguageCode()
 		}
