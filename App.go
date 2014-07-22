@@ -253,7 +253,6 @@ func (app *App) loadConfig() {
 	app.Random = rand.New(src)
 
 	app.basePath, _ = os.Getwd()
-	var dir string
 	var bytes []byte
 	var err error
 	//
@@ -265,16 +264,28 @@ func (app *App) loadConfig() {
 	if len(app.Config.ViewsExtensions) < 1 {
 		app.Config.ViewsExtensions = []string{".tpl", ".html"}
 	}
+
+	// parse Config
+	app.Config.ParseEnv()
 	//
 	// LOAD Routes.json
 	//
-	dir = FormatPath(app.Config.RoutesConfigPath)
-	bytes, err = ioutil.ReadFile(dir)
-	__panic(err)
-	err = json.Unmarshal(bytes, &app.Routes)
-	__panic(err)
-	// parse Config
-	app.Config.ParseEnv()
+	// 2014-07-22 Now accepts multiple paths, separated by semicolons
+	routespaths := strings.Split(app.Config.RoutesConfigPath, ";")
+	app.Routes = make([]Route, 0)
+	for _, rpath := range routespaths {
+		rpath = strings.TrimSpace(rpath)
+		fdir := FormatPath(rpath)
+		bytes, err = ioutil.ReadFile(fdir)
+		__panic(err)
+		tempslice := make([]Route, 0)
+		err = json.Unmarshal(bytes, &tempslice)
+		__panic(err)
+		for _, v := range tempslice {
+			log.Println("Route `" + v.Path + "` loaded.")
+			app.Routes = append(app.Routes, v)
+		}
+	}
 
 	for i := 0; i < len(app.Routes); i++ {
 		if strings.Index(app.Routes[i].Path, "^") == 0 {
