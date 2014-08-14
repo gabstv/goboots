@@ -1,7 +1,7 @@
 goboots
 =======
 
-Go + bootstrap MVC Framework
+Go MVC Framework
 
 ## TODO:
 - Flush app self cache after awhile (cleanup routine)

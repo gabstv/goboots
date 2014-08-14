@@ -289,11 +289,11 @@ func (app *App) loadConfig() {
 
 	for i := 0; i < len(app.Routes); i++ {
 		if strings.Index(app.Routes[i].Path, "^") == 0 {
-			app.Routes[i]._t = 2
-		} else if strings.Index(app.Routes[i].Path, "*") == int(len(app.Routes[i].Path))-1 {
-			//NOTE: use strings.RuneCountInString for non ASCII characters, since
-			//len(string) counts the bytes (not the characters!)
-			app.Routes[i]._t = 1
+			app.Routes[i]._t = routeMethodRegExp
+		} else if strings.HasSuffix(app.Routes[i].Path, "*") {
+			app.Routes[i]._t = routeMethodRemainder
+		} else if strings.HasSuffix(app.Routes[i].Path, "/?") {
+			app.Routes[i]._t = routeMethodIgnoreTrail
 		}
 	}
 	//

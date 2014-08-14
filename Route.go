@@ -5,6 +5,13 @@ import (
 	"strings"
 )
 
+const (
+	routeMethodExact       = byte(0)
+	routeMethodRemainder   = byte(1)
+	routeMethodRegExp      = byte(2)
+	routeMethodIgnoreTrail = byte(3)
+)
+
 type Route struct {
 	Path        string
 	Controller  string
@@ -15,12 +22,14 @@ type Route struct {
 
 func (route *Route) IsMatch(url string) bool {
 	switch route._t {
-	case byte(2):
+	case routeMethodRegExp:
 		return route.isMatchRegExp(url)
-	case byte(1):
+	case routeMethodRemainder:
 		return route.isMatchRemainder(url)
-	case byte(0):
+	case routeMethodExact:
 		return route.isMatchExact(url)
+	case routeMethodIgnoreTrail:
+		return route.isMatchIgnoreTrail(url)
 	}
 	return false
 }
@@ -36,4 +45,8 @@ func (route *Route) isMatchExact(url string) bool {
 
 func (route *Route) isMatchRemainder(url string) bool {
 	return strings.HasPrefix(url, route.Path)
+}
+
+func (route *Route) isMatchIgnoreTrail(url string) bool {
+	return url == strings.TrimRight(route.Path, "/")
 }
