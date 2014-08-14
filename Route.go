@@ -48,5 +48,5 @@ func (route *Route) isMatchRemainder(url string) bool {
 }
 
 func (route *Route) isMatchIgnoreTrail(url string) bool {
-	return url == strings.TrimRight(route.Path, "/")
+	return strings.TrimRight(url, "/") == route.Path[:len(route.Path)-2]
 }
