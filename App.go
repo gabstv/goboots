@@ -1,8 +1,10 @@
 package goboots
 
 import (
+	by "bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
 	"io/ioutil"
 	"log"
@@ -244,6 +246,16 @@ func (app *App) LoadConfigFile() error {
 	if err != nil {
 		return err
 	}
+	if xt := filepath.Ext(app.AppConfigPath); xt == ".dson" {
+		var bf0, bf1 by.Buffer
+		bf0.Write(bytes)
+		err = dson2json.Convert(&bf0, &bf1)
+		if err != nil {
+			return err
+		}
+		bytes = bf1.Bytes()
+		log.Println("such program very dson wow")
+	}
 	return json.Unmarshal(bytes, &app.Config)
 }
 
@@ -279,6 +291,13 @@ func (app *App) loadConfig() {
 		bytes, err = ioutil.ReadFile(fdir)
 		__panic(err)
 		tempslice := make([]Route, 0)
+		if xt := filepath.Ext(fdir); xt == ".dson" {
+			var bf0, bf1 by.Buffer
+			bf0.Write(bytes)
+			err = dson2json.Convert(&bf0, &bf1)
+			__panic(err)
+			bytes = bf1.Bytes()
+		}
 		err = json.Unmarshal(bytes, &tempslice)
 		__panic(err)
 		for _, v := range tempslice {
