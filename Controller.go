@@ -133,7 +133,7 @@ func (c *Controller) RenderFromCache(w http.ResponseWriter, r *http.Request, nam
 
 func (c *Controller) ParseContent(w http.ResponseWriter, r *http.Request, locTemplatePath string, content interface{}) string {
 	var tpl *template.Template
-	if len(c.App.Config.DefaultLanguage) > 0 {
+	if len(c.App.Config.DefaultLanguage) > 0 && w != nil && r != nil {
 		tpl = c.App.GetLocalizedViewTemplate(locTemplatePath, w, r)
 	} else {
 		tpl = c.App.GetViewTemplate(locTemplatePath)
