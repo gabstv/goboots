@@ -132,7 +132,7 @@ func (a *App) RegisterController(c IController) {
 	//pt := v.Type()
 	t := v.Elem().Type()
 	name := t.Name()
-	a._registerControllerMethods(c)
+	a.registerControllerMethods(c)
 	if a.controllerMap == nil {
 		a.controllerMap = make(map[string]IController, 0)
 	}
@@ -458,19 +458,31 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			if len(v.Method) == 0 {
 				content = c.Run(w, r, urlbits)
 			} else {
-				rVal, rValOK := c._getMethod(v.Method)
+				rVal, rValOK := c.getMethod(v.Method)
 				if !rValOK {
 					//TODO: display page error instead of panic
 					log.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", v.Controller, v.Method)
 				} else {
 					// finally run it
-					in := make([]reflect.Value, 4)
-					in[0] = reflect.ValueOf(c)
-					in[1] = reflect.ValueOf(w)
-					in[2] = reflect.ValueOf(r)
-					in[3] = reflect.ValueOf(urlbits)
+					var in []reflect.Value
+					if rVal.MethodKind == controllerMethodKindLegacy {
+						in = make([]reflect.Value, 4)
+						in[0] = reflect.ValueOf(c)
+						in[1] = reflect.ValueOf(w)
+						in[2] = reflect.ValueOf(r)
+						in[3] = reflect.ValueOf(urlbits)
+					} else if rVal.MethodKind == controllerMethodKindNew {
+						in = make([]reflect.Value, 2)
+						in[0] = reflect.ValueOf(c)
+						inObj := &In{
+							r,
+							w,
+							urlbits,
+						}
+						in[1] = reflect.ValueOf(inObj)
+					}
 					var out []reflect.Value
-					out = rVal.Call(in)
+					out = rVal.Val.Call(in)
 					content = out[0].Interface()
 				}
 			}
@@ -486,12 +498,13 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 	return false
 }
 
-func (a *App) _registerControllerMethods(c IController) {
+func (a *App) registerControllerMethods(c IController) {
 	v := reflect.ValueOf(c)
 	pt := v.Type()
 	//t := v.Elem().Type()
 	//name := t.Name()
-	//log.Printf("_registerControllerMethods: %s", name)
+	//log.Printf("registerControllerMethods: %s", name)
+	inType := reflect.TypeOf((*In)(nil)).Elem()
 	// mmap
 	n := pt.NumMethod()
 	for i := 0; i < n; i++ {
@@ -501,20 +514,13 @@ func (a *App) _registerControllerMethods(c IController) {
 		switch name {
 		case "Init", "Run", "Render", "PreFilter", "ParseContent":
 			continue
-		case "Redirect", "PageError", "_registerMethod", "_getMethod":
+		case "Redirect", "PageError", "registerMethod", "getMethod":
 			continue
 		}
 		mt := m.Type
 		// outp must be 1 (interface{})
 		outp := mt.NumOut()
 		if outp != 1 {
-			continue
-		}
-		// in amount is (c *Obj) (var1 type, var2 type)
-		//               # 1 #     # 2 #      # 3 #
-		inpt := mt.NumIn()
-		// input must be 4 (controller + 3)
-		if inpt != 4 {
 			continue
 		}
 		//log.Printf("Method: %s, IN:%d, OUT:%d", name, inpt, outp)
@@ -524,16 +530,34 @@ func (a *App) _registerControllerMethods(c IController) {
 		} else {
 			continue
 		}
-		if mt.In(1).Kind() != reflect.Interface {
+		// in amount is (c *Obj) (var1 type, var2 type)
+		//               # 1 #     # 2 #      # 3 #
+		inpt := mt.NumIn()
+		// input must be 4 (controller + 3) or 2 (controller + 1)
+		if inpt != 4 && inpt != 2 {
 			continue
+		} else if inpt == 4 {
+			if mt.In(1).Kind() != reflect.Interface {
+				continue
+			}
+			if mt.In(2).Kind() != reflect.Ptr {
+				continue
+			}
+			if mt.In(3).Kind() != reflect.Slice {
+				continue
+			}
+			c.registerMethod(name, m.Func, controllerMethodKindLegacy)
+		} else {
+			// 2 params
+			log.Println(name, "2 params and is kind ", mt.In(1).Kind().String())
+			if mt.In(1).Kind() != reflect.Ptr {
+				continue
+			}
+			//
+			if mt.In(1).Elem() != inType {
+				log.Println(mt.In(1).Elem().String(), "is not", inType.String())
+			}
+			c.registerMethod(name, m.Func, controllerMethodKindNew)
 		}
-		if mt.In(2).Kind() != reflect.Ptr {
-			continue
-		}
-		if mt.In(3).Kind() != reflect.Slice {
-			continue
-		}
-		//log.Printf("Method: %s is valid!", name)
-		c._registerMethod(name, m.Func)
 	}
 }

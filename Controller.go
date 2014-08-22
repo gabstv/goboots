@@ -16,8 +16,8 @@ type IController interface {
 	PreFilter(w http.ResponseWriter, r *http.Request, params []string) interface{}
 	// rendering
 	Render(w http.ResponseWriter, r *http.Request, content interface{})
-	_registerMethod(name string, method reflect.Value)
-	_getMethod(name string) (reflect.Value, bool)
+	registerMethod(name string, method reflect.Value, kind int)
+	getMethod(name string) (controllerMethod, bool)
 }
 
 type PageContent struct {
@@ -52,7 +52,17 @@ type Controller struct {
 	PageTitle     string
 	Layout        string
 	ContentType   string
-	customMethods map[string]reflect.Value
+	customMethods map[string]controllerMethod
+}
+
+const (
+	controllerMethodKindLegacy = iota
+	controllerMethodKindNew
+)
+
+type controllerMethod struct {
+	Val        reflect.Value
+	MethodKind int
 }
 
 func (c *Controller) Init(app *App) {
@@ -171,15 +181,15 @@ func (c *Controller) PageError(w http.ResponseWriter, errorTitle string, errorMe
 	return nil
 }
 
-func (c *Controller) _registerMethod(name string, method reflect.Value) {
+func (c *Controller) registerMethod(name string, method reflect.Value, kind int) {
 	if c.customMethods == nil {
-		c.customMethods = make(map[string]reflect.Value, 0)
+		c.customMethods = make(map[string]controllerMethod, 0)
 	}
-	c.customMethods[name] = method
+	c.customMethods[name] = controllerMethod{method, kind}
 }
-func (c *Controller) _getMethod(name string) (reflect.Value, bool) {
+func (c *Controller) getMethod(name string) (controllerMethod, bool) {
 	if c.customMethods == nil {
-		return reflect.Value{}, false
+		return controllerMethod{}, false
 	}
 	val, ok := c.customMethods[name]
 	return val, ok
