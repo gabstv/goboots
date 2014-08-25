@@ -19,6 +19,14 @@ type In struct {
 	R        *http.Request
 	W        http.ResponseWriter
 	URLParts []string
+	session  *Session
+}
+
+func (in *In) Session() *Session {
+	if in.session == nil {
+		in.session = GetSession(in.W, in.R)
+	}
+	return in.session
 }
 
 type Out struct {

@@ -479,6 +479,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 							r,
 							w,
 							urlbits,
+							nil,
 						}
 						in[1] = reflect.ValueOf(inObj)
 					}
