@@ -465,16 +465,17 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				} else {
 					// finally run it
 					var in []reflect.Value
-					if rVal.MethodKind == controllerMethodKindLegacy {
+					var inObj *In
+					if rVal.MethodKindIn == controllerMethodKindLegacy {
 						in = make([]reflect.Value, 4)
 						in[0] = reflect.ValueOf(c)
 						in[1] = reflect.ValueOf(w)
 						in[2] = reflect.ValueOf(r)
 						in[3] = reflect.ValueOf(urlbits)
-					} else if rVal.MethodKind == controllerMethodKindNew {
+					} else if rVal.MethodKindIn == controllerMethodKindNew {
 						in = make([]reflect.Value, 2)
 						in[0] = reflect.ValueOf(c)
-						inObj := &In{
+						inObj = &In{
 							r,
 							w,
 							urlbits,
@@ -483,7 +484,18 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 					}
 					var out []reflect.Value
 					out = rVal.Val.Call(in)
-					content = out[0].Interface()
+					if rVal.MethodKindOut == controllerMethodKindLegacy {
+						content = out[0].Interface()
+					} else if rVal.MethodKindOut == controllerMethodKindNew {
+						o0, _ := (out[0].Interface()).(*Out)
+						if rVal.MethodKindIn == controllerMethodKindLegacy {
+							w, _ := (in[1].Interface()).(http.ResponseWriter)
+							c.RenderNew(w, o0)
+						} else if rVal.MethodKindIn == controllerMethodKindNew {
+							c.RenderNew(inObj.W, o0)
+						}
+						return true
+					}
 				}
 			}
 
@@ -505,6 +517,7 @@ func (a *App) registerControllerMethods(c IController) {
 	//name := t.Name()
 	//log.Printf("registerControllerMethods: %s", name)
 	inType := reflect.TypeOf((*In)(nil)).Elem()
+	outType := reflect.TypeOf((*Out)(nil)).Elem()
 	// mmap
 	n := pt.NumMethod()
 	for i := 0; i < n; i++ {
@@ -524,9 +537,12 @@ func (a *App) registerControllerMethods(c IController) {
 			continue
 		}
 		//log.Printf("Method: %s, IN:%d, OUT:%d", name, inpt, outp)
+		outk := -1
 		methodOut := mt.Out(0)
 		if methodOut.Kind() == reflect.Interface {
-			//log.Printf("MethodOut PkgPath: %s, Name:%d", methodOut.PkgPath(), methodOut.Name())
+			outk = controllerMethodKindLegacy
+		} else if methodOut.Elem() == outType {
+			outk = controllerMethodKindNew
 		} else {
 			continue
 		}
@@ -546,7 +562,7 @@ func (a *App) registerControllerMethods(c IController) {
 			if mt.In(3).Kind() != reflect.Slice {
 				continue
 			}
-			c.registerMethod(name, m.Func, controllerMethodKindLegacy)
+			c.registerMethod(name, m.Func, controllerMethodKindLegacy, outk)
 		} else {
 			// 2 params
 			log.Println(name, "2 params and is kind ", mt.In(1).Kind().String())
@@ -557,7 +573,7 @@ func (a *App) registerControllerMethods(c IController) {
 			if mt.In(1).Elem() != inType {
 				log.Println(mt.In(1).Elem().String(), "is not", inType.String())
 			}
-			c.registerMethod(name, m.Func, controllerMethodKindNew)
+			c.registerMethod(name, m.Func, controllerMethodKindNew, outk)
 		}
 	}
 }
