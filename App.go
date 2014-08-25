@@ -542,8 +542,12 @@ func (a *App) registerControllerMethods(c IController) {
 		methodOut := mt.Out(0)
 		if methodOut.Kind() == reflect.Interface {
 			outk = controllerMethodKindLegacy
-		} else if methodOut.Elem() == outType {
-			outk = controllerMethodKindNew
+		} else if methodOut.Kind() == reflect.Ptr {
+			if methodOut.Elem() == outType {
+				outk = controllerMethodKindNew
+			} else {
+				continue
+			}
 		} else {
 			continue
 		}
