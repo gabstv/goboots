@@ -116,14 +116,14 @@ func (c *Controller) OutputSoloTpl(in *In, tplPath string, content interface{}) 
 func (c *Controller) OutputJSON(jobj interface{}) *Out {
 	o := &Out{}
 	o.kind = outJSON
-	o.jsonObj = jobj
+	o.contentObj = jobj
 	return o
 }
 
 func (c *Controller) OutputXML(xobj interface{}) *Out {
 	o := &Out{}
 	o.kind = outXML
-	o.xmlObj = xobj
+	o.contentObj = xobj
 	return o
 }
 

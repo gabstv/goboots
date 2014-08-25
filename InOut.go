@@ -1,6 +1,7 @@
 package goboots
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"net/http"
@@ -22,8 +23,6 @@ type In struct {
 
 type Out struct {
 	kind       int
-	jsonObj    interface{}
-	xmlObj     interface{}
 	contentObj interface{}
 	tpl        *template.Template
 	//in         *In
@@ -41,10 +40,24 @@ func (o *Out) mustb(b []byte, err error) []byte {
 func (o *Out) render(w http.ResponseWriter) {
 	switch o.kind {
 	case outJSON:
-		w.Write(o.mustb(json.Marshal(o.jsonObj)))
+		w.Write(o.mustb(json.Marshal(o.contentObj)))
 	case outXML:
-		w.Write(o.mustb(xml.Marshal(o.xmlObj)))
+		w.Write(o.mustb(xml.Marshal(o.contentObj)))
 	case outTemplateSolo:
 		o.tpl.Execute(w, o.contentObj)
 	}
+}
+
+func (o *Out) String() string {
+	switch o.kind {
+	case outJSON:
+		return string(o.mustb(json.Marshal(o.contentObj)))
+	case outXML:
+		return string(o.mustb(xml.Marshal(o.contentObj)))
+	case outTemplateSolo:
+		var buffer bytes.Buffer
+		o.tpl.Execute(&buffer, o.contentObj)
+		return buffer.String()
+	}
+	return ""
 }
