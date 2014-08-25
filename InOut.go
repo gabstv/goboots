@@ -13,6 +13,7 @@ const (
 	outXML          = 2
 	outTemplate     = 3
 	outTemplateSolo = 4
+	outString       = 5
 )
 
 type In struct {
@@ -32,6 +33,7 @@ func (in *In) Session() *Session {
 type Out struct {
 	kind       int
 	contentObj interface{}
+	contentStr string
 	tpl        *template.Template
 	//in         *In
 	//ctrlr      *Controller
@@ -53,6 +55,8 @@ func (o *Out) render(w http.ResponseWriter) {
 		w.Write(o.mustb(xml.Marshal(o.contentObj)))
 	case outTemplateSolo:
 		o.tpl.Execute(w, o.contentObj)
+	case outString:
+		w.Write([]byte(o.contentStr))
 	}
 }
 
@@ -66,6 +70,8 @@ func (o *Out) String() string {
 		var buffer bytes.Buffer
 		o.tpl.Execute(&buffer, o.contentObj)
 		return buffer.String()
+	case outString:
+		return o.contentStr
 	}
 	return ""
 }

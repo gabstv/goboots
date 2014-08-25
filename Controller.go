@@ -127,6 +127,13 @@ func (c *Controller) OutputXML(xobj interface{}) *Out {
 	return o
 }
 
+func (c *Controller) OutputString(str string) *Out {
+	o := &Out{}
+	o.kind = outString
+	o.contentStr = str
+	return o
+}
+
 func (c *Controller) render(w http.ResponseWriter, r *http.Request, content interface{}, customLayout string) {
 	if len(c.Layout) == 0 && len(customLayout) == 0 {
 		// no layout defined!
