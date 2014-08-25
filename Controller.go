@@ -99,6 +99,34 @@ func (c *Controller) RenderNew(w http.ResponseWriter, out *Out) {
 	out.render(w)
 }
 
+func (c *Controller) OutputSoloTpl(in *In, tplPath string, content interface{}) *Out {
+	o := &Out{}
+	o.kind = outTemplateSolo
+	o.contentObj = content
+	var tpl *template.Template
+	if len(c.App.Config.DefaultLanguage) > 0 {
+		tpl = c.App.GetLocalizedViewTemplate(tplPath, in.W, in.R)
+	} else {
+		tpl = c.App.GetViewTemplate(tplPath)
+	}
+	o.tpl = tpl
+	return o
+}
+
+func (c *Controller) OutputJSON(jobj interface{}) *Out {
+	o := &Out{}
+	o.kind = outJSON
+	o.jsonObj = jobj
+	return o
+}
+
+func (c *Controller) OutputXML(xobj interface{}) *Out {
+	o := &Out{}
+	o.kind = outXML
+	o.xmlObj = xobj
+	return o
+}
+
 func (c *Controller) render(w http.ResponseWriter, r *http.Request, content interface{}, customLayout string) {
 	if len(c.Layout) == 0 && len(customLayout) == 0 {
 		// no layout defined!

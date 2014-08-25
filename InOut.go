@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"net/http"
+	"text/template"
 )
 
 const (
-	outJSON = 1
-	outXML  = 2
+	outJSON         = 1
+	outXML          = 2
+	outTemplate     = 3
+	outTemplateSolo = 4
 )
 
 type In struct {
@@ -18,9 +21,13 @@ type In struct {
 }
 
 type Out struct {
-	kind    int
-	jsonObj interface{}
-	xmlObj  interface{}
+	kind       int
+	jsonObj    interface{}
+	xmlObj     interface{}
+	contentObj interface{}
+	tpl        *template.Template
+	//in         *In
+	//ctrlr      *Controller
 }
 
 func (o *Out) mustb(b []byte, err error) []byte {
@@ -36,6 +43,8 @@ func (o *Out) render(w http.ResponseWriter) {
 	case outJSON:
 		w.Write(o.mustb(json.Marshal(o.jsonObj)))
 	case outXML:
-		w.Write(o.mustb(xml.Marshal(o.jsonObj)))
+		w.Write(o.mustb(xml.Marshal(o.xmlObj)))
+	case outTemplateSolo:
+		o.tpl.Execute(w, o.contentObj)
 	}
 }
