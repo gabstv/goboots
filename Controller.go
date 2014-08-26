@@ -96,7 +96,9 @@ func (c *Controller) RenderWithLayout(w http.ResponseWriter, r *http.Request, co
 }
 
 func (c *Controller) RenderNew(w http.ResponseWriter, out *Out) {
-	out.render(w)
+	if out != nil {
+		out.render(w)
+	}
 }
 
 func (c *Controller) OutputSoloTpl(in *In, tplPath string, content interface{}) *Out {
