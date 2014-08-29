@@ -99,9 +99,50 @@ type ISession interface {
 }
 
 type Session struct {
-	SID  string
-	Data map[string]interface{}
-	Time time.Time
+	SID   string
+	Data  map[string]interface{}
+	Flash SessFlash `json:"-" bson:"-"` // never save flash
+	Time  time.Time
+}
+
+type SessFlash struct {
+	vals map[string]interface{}
+}
+
+func (s *SessFlash) init() {
+	if s.vals == nil {
+		s.vals = make(map[string]interface{})
+	}
+}
+
+func (s *SessFlash) Set(key string, val interface{}) {
+	s.init()
+	s.vals[key] = val
+}
+
+func (s *SessFlash) Get(key string) interface{} {
+	s.init()
+	return s.vals[key]
+}
+
+func (s *SessFlash) Get2(key string) (interface{}, bool) {
+	s.init()
+	v, ok := s.vals[key]
+	return v, ok
+}
+
+func (s *SessFlash) Del(key string) {
+	s.init()
+	delete(s.vals, key)
+}
+
+func (s *SessFlash) Clear() {
+	s.vals = nil
+}
+
+func (s *SessFlash) All() map[string]interface{} {
+	s.init()
+	return s.vals
 }
 
 func (s *Session) GetData() (string, map[string]interface{}, time.Time) {

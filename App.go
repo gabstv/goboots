@@ -480,6 +480,8 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 							w,
 							urlbits,
 							nil,
+							InContent{},
+							app,
 						}
 						in[1] = reflect.ValueOf(inObj)
 					}
@@ -495,16 +497,26 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 						} else if rVal.MethodKindIn == controllerMethodKindNew {
 							c.RenderNew(inObj.W, o0)
 						}
+						if inObj != nil {
+							if inObj.session != nil {
+								inObj.session.Flash.Clear()
+							} else {
+								inObj.Session().Flash.Clear()
+							}
+						} else {
+							GetSession(w, r).Flash.Clear()
+						}
 						return true
 					}
 				}
 			}
-
 			//c.SetContext(c)
 			if content == nil {
+				GetSession(w, r).Flash.Clear()
 				return true
 			}
 			c.Render(w, r, content)
+			GetSession(w, r).Flash.Clear()
 			return true
 		}
 	}

@@ -21,6 +21,37 @@ type In struct {
 	W        http.ResponseWriter
 	URLParts []string
 	session  *Session
+	Content  InContent
+	App      *App
+}
+
+type InContent struct {
+	vals map[string]interface{}
+}
+
+func (c *InContent) init() {
+	if c.vals == nil {
+		c.vals = make(map[string]interface{})
+	}
+}
+
+func (c *InContent) Merge(v map[string]interface{}) *InContent {
+	c.init()
+	for kk, vv := range v {
+		c.vals[kk] = vv
+	}
+	return c
+}
+
+func (c *InContent) Set(key string, val interface{}) *InContent {
+	c.init()
+	c.vals[key] = val
+	return c
+}
+
+func (c *InContent) All() map[string]interface{} {
+	c.init()
+	return c.vals
 }
 
 func (in *In) Session() *Session {
@@ -28,6 +59,20 @@ func (in *In) Session() *Session {
 		in.session = GetSession(in.W, in.R)
 	}
 	return in.session
+}
+
+func (in *In) OutputSoloTpl(tplPath string) *Out {
+	o := &Out{}
+	o.kind = outTemplateSolo
+	o.contentObj = in.Content.Set("Flash", in.Session().Flash.All()).All()
+	var tpl *template.Template
+	if len(in.App.Config.DefaultLanguage) > 0 {
+		tpl = in.App.GetLocalizedViewTemplate(tplPath, in.W, in.R)
+	} else {
+		tpl = in.App.GetViewTemplate(tplPath)
+	}
+	o.tpl = tpl
+	return o
 }
 
 type Out struct {
