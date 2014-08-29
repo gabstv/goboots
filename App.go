@@ -174,6 +174,7 @@ func (a *App) GetLocalizedLayout(name string, w http.ResponseWriter, r *http.Req
 }
 
 func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
+	//TODO: i18n HTTP Errors
 	w.WriteHeader(err)
 	errorLayout := a.GetLayout("error")
 	var erDesc string
@@ -475,13 +476,18 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 					} else if rVal.MethodKindIn == controllerMethodKindNew {
 						in = make([]reflect.Value, 2)
 						in[0] = reflect.ValueOf(c)
+						ul := GetUserLang(w, r)
 						inObj = &In{
 							r,
 							w,
 							urlbits,
 							nil,
 							InContent{},
+							InContent{},
 							app,
+							c,
+							ul,
+							i18ngo.TL(ul, app.Config.GlobalPageTitle),
 						}
 						in[1] = reflect.ValueOf(inObj)
 					}

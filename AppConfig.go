@@ -16,6 +16,7 @@ type DatabaseConfig struct {
 
 type AppConfig struct {
 	Name            string
+	GlobalPageTitle string `json:",omitempty"`
 	Version         string
 	HostAddr        string
 	HostAddrTLS     string
@@ -47,6 +48,7 @@ func (a *AppConfig) ParseEnv() {
 		return os.Getenv(raw[1:])
 	}
 	a.Name = re.ReplaceAllStringFunc(a.Name, replacer)
+	a.GlobalPageTitle = re.ReplaceAllStringFunc(a.GlobalPageTitle, replacer)
 	a.Version = re.ReplaceAllStringFunc(a.Version, replacer)
 	a.HostAddr = re.ReplaceAllStringFunc(a.HostAddr, replacer)
 	a.HostAddrTLS = re.ReplaceAllStringFunc(a.HostAddrTLS, replacer)

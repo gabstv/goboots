@@ -10,7 +10,8 @@ import (
 )
 
 type IController interface {
-	//Setup(app *App)
+	GetPageTitle() string
+	GetLayoutName() string
 	Init(app *App)
 	Run(w http.ResponseWriter, r *http.Request, params []string) interface{}
 	PreFilter(w http.ResponseWriter, r *http.Request, params []string) interface{}
@@ -65,6 +66,14 @@ type controllerMethod struct {
 	Val           reflect.Value
 	MethodKindIn  int
 	MethodKindOut int
+}
+
+func (c *Controller) GetPageTitle() string {
+	return c.PageTitle
+}
+
+func (c *Controller) GetLayoutName() string {
+	return c.Layout
 }
 
 func (c *Controller) Init(app *App) {
