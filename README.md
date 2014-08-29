@@ -8,3 +8,4 @@ Go MVC Framework
 - Setup documentation
 - Setup starter project
 - Add example projects
+- [Implement GZip Encoding](https://gist.github.com/the42/1956518)
