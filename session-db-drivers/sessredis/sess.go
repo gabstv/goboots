@@ -5,6 +5,7 @@ import (
 	"github.com/gabstv/goboots"
 	"github.com/hoisie/redis"
 	"strconv"
+	"time"
 )
 
 type RedisDBSession struct {
@@ -28,6 +29,12 @@ func (m *RedisDBSession) GetSession(sid string) (*goboots.Session, error) {
 		return nil, err
 	}
 	json.Unmarshal(b, msession)
+
+	msession.Updated = time.Now()
+	msession.Flush()
+	//TODO: put expire time in a config
+	m.client.Expire("goboots_sessid:"+sid, 60*60*24*30)
+
 	return msession, nil
 }
 
@@ -53,6 +60,10 @@ func (m *RedisDBSession) NewSession(session *goboots.Session) error {
 func (m *RedisDBSession) RemoveSession(session *goboots.Session) error {
 	_, err := m.client.Del("goboots_sessid:" + session.SID)
 	return err
+}
+
+func (m *RedisDBSession) Cleanup(minTime time.Time) {
+	// Redis keys are set to expire after each update
 }
 
 func (m *RedisDBSession) Close() {

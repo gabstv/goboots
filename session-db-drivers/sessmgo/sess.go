@@ -4,6 +4,8 @@ import (
 	"github.com/gabstv/goboots"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
+	"log"
+	"time"
 )
 
 type MongoDBSession struct {
@@ -27,6 +29,8 @@ func (m *MongoDBSession) GetSession(sid string) (*goboots.Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	msession.Updated = time.Now()
+	msession.Flush()
 	return msession, nil
 }
 
@@ -50,6 +54,16 @@ func (m *MongoDBSession) NewSession(session *goboots.Session) error {
 
 func (m *MongoDBSession) RemoveSession(session *goboots.Session) error {
 	return m.mdb.C("goboots_sessid").Remove(bson.M{"sid": session.SID})
+}
+
+func (m *MongoDBSession) Cleanup(minTime time.Time) {
+	n, _ := m.mdb.C("goboots_sessid").Find(bson.M{"updated": bson.M{"$lt": minTime}}).Count()
+	err := m.mdb.C("goboots_sessid").Remove(bson.M{"updated": bson.M{"$lt": minTime}})
+	if err == nil {
+		log.Println("MongoDBSession::Cleanup ok", n, "entries removed")
+	} else {
+		log.Println("MongoDBSession::Cleanup error", err)
+	}
 }
 
 func (m *MongoDBSession) Close() {
@@ -88,6 +102,14 @@ func (m *MongoDBSession) connect() error {
 			return err
 		}
 	}
+
+	// set indexes!
+	index := mgo.Index{}
+	index.Key = []string{"updated"}
+	index.Name = "updated"
+	index.Unique = false
+	m.mdb.C("goboots_sessid").EnsureIndex(index)
+
 	return nil
 }
 

@@ -3,6 +3,8 @@ package sessmemory
 import (
 	"errors"
 	"github.com/gabstv/goboots"
+	"log"
+	"time"
 )
 
 type MemoryDbSession struct {
@@ -29,6 +31,9 @@ func (m *MemoryDbSession) GetSession(sid string) (*goboots.Session, error) {
 		return nil, errors.New("Not found.")
 	}
 
+	sess.Updated = time.Now()
+	sess.Flush()
+
 	return sess, nil
 }
 
@@ -49,6 +54,20 @@ func (m *MemoryDbSession) RemoveSession(session *goboots.Session) error {
 	m.connect()
 	m.rcs <- session
 	return nil
+}
+
+func (m *MemoryDbSession) Cleanup(minTime time.Time) {
+	//TODO: implement a faster cleanup method
+	delList := make([]string, 0, len(m.sessions))
+	for k, v := range m.sessions {
+		if minTime.After(v.Updated) {
+			delList = append(delList, k)
+		}
+	}
+	for _, v := range delList {
+		delete(m.sessions, v)
+	}
+	log.Println("MemoryDbSession::Cleanup ok", len(delList), "entries removed")
 }
 
 func (m *MemoryDbSession) Close() {

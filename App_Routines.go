@@ -24,10 +24,13 @@ func (app *App) runRoutines() {
 		return
 	}
 	app.didRunRoutines = true
+
+	// TEMPLATE CACHE
 	// commenting for now since the template fix routine isn't done
-	//go func() {
-	//	app.routineTemplateCacheMaitenance()
-	//}()
+	//go app.routineTemplateCacheMaitenance()
+
+	// SESSIONS
+	go app.routineSessionMaintenance()
 }
 
 func (app *App) routineTemplateCacheMaitenance() {
@@ -45,5 +48,14 @@ func (app *App) routineTemplateCacheMaitenance() {
 				}
 			}
 		}
+	}
+}
+
+func (app *App) routineSessionMaintenance() {
+	time.Sleep(10 * time.Second)
+	log.Println("Session maintenance routine started.")
+	for {
+		curSessionDb.Cleanup(time.Now().AddDate(0, 0, -30))
+		time.Sleep(time.Minute * 30)
 	}
 }

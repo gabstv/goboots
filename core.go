@@ -99,10 +99,11 @@ type ISession interface {
 }
 
 type Session struct {
-	SID   string
-	Data  map[string]interface{}
-	Flash SessFlash `json:"-" bson:"-"` // never save flash
-	Time  time.Time
+	SID     string
+	Data    map[string]interface{}
+	Flash   SessFlash `json:"-" bson:"-"` // never save flash
+	Time    time.Time
+	Updated time.Time
 }
 
 type SessFlash struct {
@@ -237,9 +238,10 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 	sid = fmt.Sprintf("%x", uuid)
 
 	session := &Session{
-		SID:  sid,
-		Data: make(map[string]interface{}),
-		Time: time.Now(),
+		SID:     sid,
+		Data:    make(map[string]interface{}),
+		Time:    time.Now(),
+		Updated: time.Now(),
 	}
 	err = curSessionDb.NewSession(session)
 	__panic(err)

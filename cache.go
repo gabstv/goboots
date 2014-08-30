@@ -141,5 +141,6 @@ type ISessionDBEngine interface {
 	PutSession(session *Session) error
 	NewSession(session *Session) error
 	RemoveSession(session *Session) error
+	Cleanup(minTime time.Time)
 	Close()
 }
