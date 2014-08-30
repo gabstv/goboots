@@ -140,6 +140,27 @@ func (in *In) OutputSoloTpl(tplPath string) *Out {
 	return o
 }
 
+func (in *In) OutputJSON(jobj interface{}) *Out {
+	o := &Out{}
+	o.kind = outJSON
+	o.contentObj = jobj
+	return o
+}
+
+func (in *In) OutputXML(xobj interface{}) *Out {
+	o := &Out{}
+	o.kind = outXML
+	o.contentObj = xobj
+	return o
+}
+
+func (in *In) OutputString(str string) *Out {
+	o := &Out{}
+	o.kind = outString
+	o.contentStr = str
+	return o
+}
+
 type Out struct {
 	kind         int
 	contentObj   interface{}

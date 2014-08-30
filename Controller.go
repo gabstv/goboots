@@ -110,6 +110,7 @@ func (c *Controller) RenderNew(w http.ResponseWriter, out *Out) {
 	}
 }
 
+//TODO: remove Output functions (they are inside the In struct)
 func (c *Controller) OutputSoloTpl(in *In, tplPath string, content interface{}) *Out {
 	o := &Out{}
 	o.kind = outTemplateSolo
