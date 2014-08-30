@@ -57,6 +57,9 @@ func (m *MongoDBSession) RemoveSession(session *goboots.Session) error {
 }
 
 func (m *MongoDBSession) Cleanup(minTime time.Time) {
+	if m.mdb == nil {
+		return
+	}
 	n, _ := m.mdb.C("goboots_sessid").Find(bson.M{"updated": bson.M{"$lt": minTime}}).Count()
 	err := m.mdb.C("goboots_sessid").Remove(bson.M{"updated": bson.M{"$lt": minTime}})
 	if err == nil {

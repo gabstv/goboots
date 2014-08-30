@@ -57,6 +57,9 @@ func (m *MemoryDbSession) RemoveSession(session *goboots.Session) error {
 }
 
 func (m *MemoryDbSession) Cleanup(minTime time.Time) {
+	if m.sessions == nil {
+		return
+	}
 	//TODO: implement a faster cleanup method
 	delList := make([]string, 0, len(m.sessions))
 	for k, v := range m.sessions {
