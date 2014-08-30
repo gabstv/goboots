@@ -1,7 +1,9 @@
 goboots
 =======
+![goboots](https://s3.amazonaws.com/gabstv-github/goboots.png)
 
-Go MVC Framework
+Go View Controller Web Framework  
+Very early stage of development, so expect a lot of changes.
 
 ## TODO:
 - Flush app self cache after awhile (cleanup routine)
