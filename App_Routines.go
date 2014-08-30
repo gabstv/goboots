@@ -52,7 +52,7 @@ func (app *App) routineTemplateCacheMaitenance() {
 }
 
 func (app *App) routineSessionMaintenance() {
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 	log.Println("Session maintenance routine started.")
 	for {
 		curSessionDb.Cleanup(time.Now().AddDate(0, 0, -30))
