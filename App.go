@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -24,6 +25,7 @@ type App struct {
 	AppConfigPath string
 	Config        AppConfig
 	Routes        []Route
+	Filters       []Filter
 	ByteCaches    *ByteCacheCollection
 	GenericCaches *GenericCacheCollection
 	Random        *rand.Rand
@@ -271,8 +273,10 @@ func (app *App) loadConfig() {
 	//
 	// LOAD AppConfig.json
 	//
-	err = app.LoadConfigFile()
-	__panic(err)
+	if len(app.Config.Name) == 0 {
+		err = app.LoadConfigFile()
+		__panic(err)
+	}
 	// set default views extension if none
 	if len(app.Config.ViewsExtensions) < 1 {
 		app.Config.ViewsExtensions = []string{".tpl", ".html"}
@@ -283,27 +287,31 @@ func (app *App) loadConfig() {
 	//
 	// LOAD Routes.json
 	//
-	// 2014-07-22 Now accepts multiple paths, separated by semicolons
-	routespaths := strings.Split(app.Config.RoutesConfigPath, ";")
-	app.Routes = make([]Route, 0)
-	for _, rpath := range routespaths {
-		rpath = strings.TrimSpace(rpath)
-		fdir := FormatPath(rpath)
-		bytes, err = ioutil.ReadFile(fdir)
-		__panic(err)
-		tempslice := make([]Route, 0)
-		if xt := filepath.Ext(fdir); xt == ".dson" {
-			var bf0, bf1 by.Buffer
-			bf0.Write(bytes)
-			err = dson2json.Convert(&bf0, &bf1)
+	if app.Routes == nil {
+		app.Routes = make([]Route, 0)
+	}
+	if len(app.Config.RoutesConfigPath) > 0 {
+		// 2014-07-22 Now accepts multiple paths, separated by semicolons
+		routespaths := strings.Split(app.Config.RoutesConfigPath, ";")
+		for _, rpath := range routespaths {
+			rpath = strings.TrimSpace(rpath)
+			fdir := FormatPath(rpath)
+			bytes, err = ioutil.ReadFile(fdir)
 			__panic(err)
-			bytes = bf1.Bytes()
-		}
-		err = json.Unmarshal(bytes, &tempslice)
-		__panic(err)
-		for _, v := range tempslice {
-			log.Println("Route `" + v.Path + "` loaded.")
-			app.Routes = append(app.Routes, v)
+			tempslice := make([]Route, 0)
+			if xt := filepath.Ext(fdir); xt == ".dson" {
+				var bf0, bf1 by.Buffer
+				bf0.Write(bytes)
+				err = dson2json.Convert(&bf0, &bf1)
+				__panic(err)
+				bytes = bf1.Bytes()
+			}
+			err = json.Unmarshal(bytes, &tempslice)
+			__panic(err)
+			for _, v := range tempslice {
+				log.Println("Route `" + v.Path + "` loaded.")
+				app.Routes = append(app.Routes, v)
+			}
 		}
 	}
 
@@ -342,6 +350,10 @@ func (app *App) loadConfig() {
 
 func (a *App) loadTemplates() {
 	log.Println("loading template files (" + strings.Join(a.Config.ViewsExtensions, ",") + ")")
+	if len(a.Config.ViewsFolderPath) == 0 {
+		log.Println("ViewsFolderPath is empty")
+		return
+	}
 	a.templateMap = make(map[string]*templateInfo, 0)
 	fdir := FormatPath(a.Config.ViewsFolderPath)
 	bytesLoaded := int(0)
@@ -444,20 +456,46 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 					return true
 				}
 			}
-			// run pre filter
+
+			var inObj *In
+			ul := GetUserLang(w, r)
+			inObj = &In{
+				r,
+				w,
+				urlbits,
+				nil,
+				InContent{},
+				InContent{},
+				app,
+				c,
+				ul,
+				i18ngo.TL(ul, app.Config.GlobalPageTitle),
+				make([]io.Closer, 0),
+			}
+			// close all io.Closer if present
+			defer inObj.closeall()
+			// run all filters
+			if app.Filters != nil {
+				for _, filter := range app.Filters {
+					if ok := filter(inObj); !ok {
+						return true
+					}
+				}
+			}
+			// run controller pre filter
 			// you may want to run something before all the other methods, this is where you do it
-			prec := c.PreFilter(w, r, urlbits)
+			prec := c.PreFilter(inObj.W, inObj.R, urlbits)
 			if prec != nil {
 				if v9, ok9 := prec.(bool); ok9 && !v9 {
 					return true
 				}
-				c.Render(w, r, prec)
+				c.Render(inObj.W, inObj.R, prec)
 				return true
 			}
 			// run main controller function
 			var content interface{}
 			if len(v.Method) == 0 {
-				content = c.Run(w, r, urlbits)
+				content = c.Run(inObj.W, inObj.R, urlbits)
 			} else {
 				rVal, rValOK := c.getMethod(v.Method)
 				if !rValOK {
@@ -466,29 +504,16 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				} else {
 					// finally run it
 					var in []reflect.Value
-					var inObj *In
+
 					if rVal.MethodKindIn == controllerMethodKindLegacy {
 						in = make([]reflect.Value, 4)
 						in[0] = reflect.ValueOf(c)
-						in[1] = reflect.ValueOf(w)
-						in[2] = reflect.ValueOf(r)
+						in[1] = reflect.ValueOf(inObj.W)
+						in[2] = reflect.ValueOf(inObj.R)
 						in[3] = reflect.ValueOf(urlbits)
 					} else if rVal.MethodKindIn == controllerMethodKindNew {
 						in = make([]reflect.Value, 2)
 						in[0] = reflect.ValueOf(c)
-						ul := GetUserLang(w, r)
-						inObj = &In{
-							r,
-							w,
-							urlbits,
-							nil,
-							InContent{},
-							InContent{},
-							app,
-							c,
-							ul,
-							i18ngo.TL(ul, app.Config.GlobalPageTitle),
-						}
 						in[1] = reflect.ValueOf(inObj)
 					}
 					var out []reflect.Value
@@ -503,14 +528,10 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 						} else if rVal.MethodKindIn == controllerMethodKindNew {
 							c.RenderNew(inObj.W, o0)
 						}
-						if inObj != nil {
-							if inObj.session != nil {
-								inObj.session.Flash.Clear()
-							} else {
-								inObj.Session().Flash.Clear()
-							}
+						if inObj.session != nil {
+							inObj.session.Flash.Clear()
 						} else {
-							GetSession(w, r).Flash.Clear()
+							inObj.Session().Flash.Clear()
 						}
 						return true
 					}
@@ -518,11 +539,11 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			}
 			//c.SetContext(c)
 			if content == nil {
-				GetSession(w, r).Flash.Clear()
+				inObj.Session().Flash.Clear()
 				return true
 			}
-			c.Render(w, r, content)
-			GetSession(w, r).Flash.Clear()
+			c.Render(inObj.W, inObj.R, content)
+			inObj.Session().Flash.Clear()
 			return true
 		}
 	}

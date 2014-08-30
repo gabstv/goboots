@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"github.com/gabstv/i18ngo"
+	"io"
 	"net/http"
 	"text/template"
 )
@@ -30,6 +31,16 @@ type In struct {
 	Controller    IController
 	LangCode      string
 	GlobalTitle   string
+	closers       []io.Closer
+}
+
+func (in *In) closeall() {
+	if in.closers == nil {
+		return
+	}
+	for _, v := range in.closers {
+		v.Close()
+	}
 }
 
 type InContent struct {
@@ -182,6 +193,7 @@ func (o *Out) mustb(b []byte, err error) []byte {
 func (o *Out) render(w http.ResponseWriter) {
 	switch o.kind {
 	case outJSON:
+		w.Header().Set("Content-Type", "application/json; charset=utf8")
 		w.Write(o.mustb(json.Marshal(o.contentObj)))
 	case outXML:
 		w.Write(o.mustb(xml.Marshal(o.contentObj)))
