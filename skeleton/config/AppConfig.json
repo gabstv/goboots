@@ -8,7 +8,7 @@
 	"LocalePath" : "",
 	"DefaultLanguage": "",
 	"Data" : {},
-	"RoutesConfigPath": "config/Routes.json; config/Routes2.json",
+	"RoutesConfigPath": "config/Routes.json; config/Routes2.dson",
 	"ViewsFolderPath":  "view",
 	"PublicFolderPath": "public",
 
