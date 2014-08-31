@@ -37,6 +37,21 @@ type In struct {
 	closers       []io.Closer
 }
 
+// New clones a new In but without the content.
+// Useful to render separate parts
+func (in *In) New() *In {
+	in2 := &In{}
+	in2.R = in.R
+	in2.W = in.W
+	in2.URLParts = in.URLParts
+	in2.session = in.session
+	in2.App = in.App
+	in2.Controller = in.Controller
+	in2.LangCode = in.LangCode
+	in2.GlobalTitle = in.GlobalTitle
+	return in2
+}
+
 func (in *In) closeall() {
 	if in.closers == nil {
 		return
