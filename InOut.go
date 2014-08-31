@@ -66,12 +66,16 @@ func (c *InContent) Merge(v interface{}) *InContent {
 		if vtype.Elem().Kind() != reflect.Struct {
 			return c
 		}
-		vtype = vtype.Elem()
 	default:
 		// tried to merge an invalid type
 		return c
 	}
 	vl := reflect.ValueOf(v)
+	if vtype.Kind() == reflect.Ptr {
+		vl = vl.Elem()
+		vtype = vtype.Elem()
+		log.Println(vl.Kind().String())
+	}
 	if vtype.Kind() == reflect.Map {
 		// merge mappy things
 		if vtype.Key().Kind() != reflect.String {

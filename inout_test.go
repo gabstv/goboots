@@ -23,4 +23,10 @@ func TestInContentMerge(t *testing.T) {
 	if ocount != 10 {
 		t.Fatal("InContent Merge FAILED [2]")
 	}
+	struct0.Oranges = 5
+	c0.Merge(&struct0)
+	ocount, _ = c0.GetInt2("Oranges")
+	if ocount != 5 {
+		t.Fatal("InContent Merge FAILED [3]")
+	}
 }
