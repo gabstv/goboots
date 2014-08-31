@@ -57,6 +57,9 @@ func (c *InContent) init() {
 }
 
 func (c *InContent) Merge(v interface{}) *InContent {
+	if v == nil {
+		return c
+	}
 	c.init()
 	vtype := reflect.TypeOf(v)
 	switch vtype.Kind() {
