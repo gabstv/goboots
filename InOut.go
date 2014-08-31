@@ -7,7 +7,9 @@ import (
 	"encoding/xml"
 	"github.com/gabstv/i18ngo"
 	"io"
+	"log"
 	"net/http"
+	"reflect"
 	"text/template"
 )
 
@@ -54,10 +56,40 @@ func (c *InContent) init() {
 	}
 }
 
-func (c *InContent) Merge(v map[string]interface{}) *InContent {
+func (c *InContent) Merge(v interface{}) *InContent {
 	c.init()
-	for kk, vv := range v {
-		c.vals[kk] = vv
+	vtype := reflect.TypeOf(v)
+	switch vtype.Kind() {
+	case reflect.Map, reflect.Struct:
+		// PASS
+	case reflect.Ptr:
+		if vtype.Elem().Kind() != reflect.Struct {
+			return c
+		}
+		vtype = vtype.Elem()
+	default:
+		// tried to merge an invalid type
+		return c
+	}
+	vl := reflect.ValueOf(v)
+	if vtype.Kind() == reflect.Map {
+		// merge mappy things
+		if vtype.Key().Kind() != reflect.String {
+			log.Println("MAP KEY IS NOT A STRING!")
+			return c
+		}
+		keys := vl.MapKeys()
+		for _, key := range keys {
+			val := vl.MapIndex(key)
+			c.vals[key.String()] = val.Interface()
+		}
+	} else {
+		// merge structy things
+		len0 := vl.NumField()
+		for i := 0; i < len0; i++ {
+			field := vl.Field(i)
+			c.vals[vtype.Field(i).Name] = field.Interface()
+		}
 	}
 	return c
 }
@@ -74,6 +106,16 @@ func (c *InContent) GetString2(key string) (val string, ok bool) {
 	rval, ok = c.vals[key]
 	if ok {
 		val = rval.(string)
+	}
+	return
+}
+
+func (c *InContent) GetInt2(key string) (val int, ok bool) {
+	c.init()
+	var rval interface{}
+	rval, ok = c.vals[key]
+	if ok {
+		val, _ = rval.(int)
 	}
 	return
 }
