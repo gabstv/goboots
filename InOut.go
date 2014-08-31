@@ -154,6 +154,10 @@ func (in *In) OutputTpl(tplPath string) *Out {
 	return in.outputTpl(tplPath, "")
 }
 
+func (in *In) OutputLayTpl(layout, tplPath string) *Out {
+	return in.outputTpl(tplPath, layout)
+}
+
 func (in *In) outputTpl(tplPath, customLayout string) *Out {
 	o := &Out{}
 	in.LayoutContent.Set("Content", in.OutputSoloTpl(tplPath).String())
