@@ -28,8 +28,8 @@ type In struct {
 	W             http.ResponseWriter
 	URLParts      []string
 	session       *Session
-	Content       InContent
-	LayoutContent InContent
+	Content       *InContent
+	LayoutContent *InContent
 	App           *App
 	Controller    IController
 	LangCode      string
@@ -45,6 +45,8 @@ func (in *In) New() *In {
 	in2.W = in.W
 	in2.URLParts = in.URLParts
 	in2.session = in.session
+	in2.Content = &InContent{}
+	in2.LayoutContent = &InContent{}
 	in2.App = in.App
 	in2.Controller = in.Controller
 	in2.LangCode = in.LangCode
