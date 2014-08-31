@@ -236,6 +236,10 @@ type Out struct {
 	tpl          *template.Template
 }
 
+func (o *Out) IsContinue() bool {
+	return o.kind == outPre
+}
+
 func (o *Out) mustb(b []byte, err error) []byte {
 	if err != nil {
 		panic(err)
