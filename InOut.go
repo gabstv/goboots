@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	outPre          = 0
 	outJSON         = 1
 	outXML          = 2
 	outTemplate     = 3
@@ -172,14 +173,18 @@ func (in *In) OutputString(str string) *Out {
 	return o
 }
 
+func (in *In) Continue() *Out {
+	o := &Out{}
+	o.kind = outPre
+	return o
+}
+
 type Out struct {
 	kind         int
 	contentObj   interface{}
 	contentStr   string
 	contentBytes []byte
 	tpl          *template.Template
-	//in         *In
-	//ctrlr      *Controller
 }
 
 func (o *Out) mustb(b []byte, err error) []byte {
