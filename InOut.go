@@ -158,9 +158,15 @@ func (in *In) OutputLayTpl(layout, tplPath string) *Out {
 	return in.outputTpl(tplPath, layout)
 }
 
+func (in *In) OutputLay(layout string) *Out {
+	return in.outputTpl("", layout)
+}
+
 func (in *In) outputTpl(tplPath, customLayout string) *Out {
 	o := &Out{}
-	in.LayoutContent.Set("Content", in.OutputSoloTpl(tplPath).String())
+	if len(tplPath) > 0 {
+		in.LayoutContent.Set("Content", in.OutputSoloTpl(tplPath).String())
+	}
 	if v, ok := in.LayoutContent.GetString2("Title"); ok {
 		in.LayoutContent.Set("Title", in.GlobalTitle+v)
 	} else {
