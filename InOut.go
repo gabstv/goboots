@@ -205,7 +205,7 @@ func (in *In) outputTpl(tplPath, customLayout string) *Out {
 		ln = customLayout
 	}
 	var layoutTpl *template.Template
-	if len(in.App.Config.DefaultLanguage) > 0 {
+	if len(in.App.Config.DefaultLanguage) > 0 && in.R != nil && in.W != nil {
 		layoutTpl = in.App.GetLocalizedLayout(ln, in.W, in.R)
 	} else {
 		layoutTpl = in.App.GetLayout(ln)
@@ -219,7 +219,7 @@ func (in *In) OutputSoloTpl(tplPath string) *Out {
 	o.kind = outTemplateSolo
 	o.contentObj = in.Content.Set("Flash", in.Session().Flash.All()).All()
 	var tpl *template.Template
-	if len(in.App.Config.DefaultLanguage) > 0 {
+	if len(in.App.Config.DefaultLanguage) > 0 && in.R != nil && in.W != nil {
 		tpl = in.App.GetLocalizedViewTemplate(tplPath, in.W, in.R)
 	} else {
 		tpl = in.App.GetViewTemplate(tplPath)
