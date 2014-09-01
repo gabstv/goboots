@@ -249,6 +249,13 @@ func (in *In) OutputString(str string) *Out {
 	return o
 }
 
+func (in *In) OutputBytes(b []byte) *Out {
+	o := &Out{}
+	o.kind = outBytes
+	o.contentBytes = b
+	return o
+}
+
 func (in *In) Continue() *Out {
 	o := &Out{}
 	o.kind = outPre
