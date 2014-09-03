@@ -289,7 +289,7 @@ func (o *Out) mustb(b []byte, err error) []byte {
 func (o *Out) render(w http.ResponseWriter) {
 	switch o.kind {
 	case outJSON:
-		w.Header().Set("Content-Type", "application/json; charset=utf8")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Write(o.mustb(json.Marshal(o.contentObj)))
 	case outXML:
 		w.Write(o.mustb(xml.Marshal(o.contentObj)))
