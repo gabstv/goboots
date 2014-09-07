@@ -112,6 +112,14 @@ func (m *MongoDBSession) connect() error {
 	index.Name = "updated"
 	index.Unique = false
 	m.mdb.C("goboots_sessid").EnsureIndex(index)
+	// sid index for quick search
+	index2 := mgo.Index{}
+	index2.Key = []string{"sid"}
+	index2.Name = "sid"
+	index2.Unique = true
+	index2.DropDups = true
+	index2.Background = false
+	m.mdb.C("goboots_sessid").EnsureIndex(index2)
 
 	return nil
 }
