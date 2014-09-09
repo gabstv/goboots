@@ -266,6 +266,13 @@ func (in *In) Continue() *Out {
 	return o
 }
 
+func (in *In) SetNoCache() *In {
+	in.W.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	in.W.Header().Set("Pragma", "no-cache")
+	in.W.Header().Set("Expires", "0")
+	return in
+}
+
 type Out struct {
 	kind         int
 	contentObj   interface{}
