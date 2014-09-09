@@ -289,15 +289,29 @@ func (o *Out) mustb(b []byte, err error) []byte {
 func (o *Out) render(w http.ResponseWriter) {
 	switch o.kind {
 	case outJSON:
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		if len(w.Header().Get("Content-Type")) < 1 {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		}
 		w.Write(o.mustb(json.Marshal(o.contentObj)))
 	case outXML:
+		if len(w.Header().Get("Content-Type")) < 1 {
+			w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		}
 		w.Write(o.mustb(xml.Marshal(o.contentObj)))
 	case outTemplateSolo, outTemplate:
+		if len(w.Header().Get("Content-Type")) < 1 {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		}
 		o.tpl.Execute(w, o.contentObj)
 	case outString:
+		if len(w.Header().Get("Content-Type")) < 1 {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		}
 		w.Write([]byte(o.contentStr))
 	case outBytes:
+		if len(w.Header().Get("Content-Type")) < 1 {
+			w.Header().Set("Content-Type", "application/octet-stream; charset=utf-8")
+		}
 		w.Write(o.contentBytes)
 	}
 }
