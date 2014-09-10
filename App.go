@@ -30,14 +30,15 @@ type App struct {
 	GenericCaches *GenericCacheCollection
 	Random        *rand.Rand
 	// "private"
-	controllerMap  map[string]IController
-	templateMap    map[string]*templateInfo
-	basePath       string
-	entryHTTP      *appHTTP
-	entryHTTPS     *appHTTPS
-	didRunRoutines bool
-	mainChan       chan error
-	loadedAll      bool
+	controllerMap   map[string]IController
+	templateMap     map[string]*templateInfo
+	templateFuncMap template.FuncMap
+	basePath        string
+	entryHTTP       *appHTTP
+	entryHTTPS      *appHTTPS
+	didRunRoutines  bool
+	mainChan        chan error
+	loadedAll       bool
 }
 
 type appHTTP struct {
@@ -348,7 +349,26 @@ func (app *App) loadConfig() {
 	app.GenericCaches = NewGenericCacheCollection()
 }
 
+func (a *App) AddTemplateFuncMap(tfmap map[string]interface{}) {
+	if a.templateFuncMap == nil {
+		a.templateFuncMap = make(template.FuncMap)
+	}
+	for k, v := range tfmap {
+		a.templateFuncMap[k] = v
+	}
+}
+
+func (a *App) AddTemplateFunc(key string, tfunc interface{}) {
+	if a.templateFuncMap == nil {
+		a.templateFuncMap = make(template.FuncMap)
+	}
+	a.templateFuncMap[key] = tfunc
+}
+
 func (a *App) loadTemplates() {
+	if a.templateFuncMap == nil {
+		a.templateFuncMap = make(template.FuncMap)
+	}
 	log.Println("loading template files (" + strings.Join(a.Config.ViewsExtensions, ",") + ")")
 	if len(a.Config.ViewsFolderPath) == 0 {
 		log.Println("ViewsFolderPath is empty")
@@ -373,7 +393,7 @@ func (a *App) loadTemplates() {
 					path:       path,
 					lastUpdate: time.Now(),
 				}
-				templ := template.New(path)
+				templ := template.New(path).Funcs(a.templateFuncMap)
 				templ, err0 := templ.Parse(string(bytes))
 				__panic(err0)
 				tplInfo.data = templ
