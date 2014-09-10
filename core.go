@@ -228,6 +228,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 			fmt.Printf("COULD NOT VALIDATE :( [%s]\n", sid)
 		}
 	}
+	//TODO: improve session generation because it created a duplicate key!
 	// gen session
 	rand.Seed(time.Now().UnixNano())
 	var uuid [16]byte
