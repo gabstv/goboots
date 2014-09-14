@@ -549,9 +549,6 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 func (a *App) registerControllerMethods(c IController) {
 	v := reflect.ValueOf(c)
 	pt := v.Type()
-	//t := v.Elem().Type()
-	//name := t.Name()
-	//log.Printf("registerControllerMethods: %s", name)
 	inType := reflect.TypeOf((*In)(nil)).Elem()
 	outType := reflect.TypeOf((*Out)(nil)).Elem()
 	// mmap

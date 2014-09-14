@@ -24,6 +24,7 @@ func (w gzipRespWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
+// based on https://gist.github.com/the42/1956518
 func CompressFilter(in *In) bool {
 	if !strings.Contains(in.R.Header.Get("Accept-Encoding"), "gzip") {
 		return true
