@@ -77,7 +77,7 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 							lpath = path.Join(lwd, lpath)
 						}
 						//TODO: test if this really prevents off
-						if !strings.HasPrefix(lpath, basePath) {
+						if !strings.HasPrefix(lpath, basePath) && !strings.HasPrefix(lpath, viewsFolderPath) {
 							return nil, errors.New("partial template path `" + lpath + "` outside of app path `" + basePath + "`!")
 						}
 						// get raw template
