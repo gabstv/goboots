@@ -5,10 +5,12 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"log"
+	//"log"
 	"path"
 	"strings"
 )
+
+//TODO: !IMPORTANT check for a way to avoid infinite loop cycles!
 
 // {{partial "NAME" /path/to/template}}
 
@@ -29,14 +31,14 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 			skipb--
 			continue
 		}
-		log.Println(string(v), k, tlen-13)
+		//log.Println(string(v), k, tlen-13)
 		if v == '{' && k < tlen-13 {
-			log.Println("possible match!")
-			log.Println("`"+string(template[k:k+10])+"`", "`"+string(partialb)+"`")
+			//log.Println("possible match!")
+			//log.Println("`"+string(template[k:k+10])+"`", "`"+string(partialb)+"`")
 			if bytes.Compare(template[k:k+10], partialb) == 0 {
 				// we got a match
 				k2 := k + 10
-				log.Println("match at", k2, template[k2])
+				//log.Println("match at", k2, template[k2])
 				for {
 					if k2 >= tlen {
 						// EOF!
@@ -52,7 +54,7 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 						}
 						// finalize
 						sptr := strings.TrimSpace(wb.String())
-						log.Println("sptr", sptr)
+						//log.Println("sptr", sptr)
 						name := ""
 						lpath := ""
 						if sptr[0] == '"' {
@@ -63,8 +65,8 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 							// inline
 							lpath = sptr
 						}
-						log.Println("name", name)
-						log.Println("lpath", lpath)
+						//log.Println("name", name)
+						//log.Println("lpath", lpath)
 						if strings.HasPrefix(lpath, "./") {
 							lpath = path.Join(lwd, lpath[1:])
 						} else if strings.HasPrefix(lpath, "../") {
