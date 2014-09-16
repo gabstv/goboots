@@ -387,7 +387,11 @@ func (a *App) loadTemplates() {
 			}
 		}
 		if extensionIsValid {
-			bytes, _ := ioutil.ReadFile(path)
+			bytes, err := ioutil.ReadFile(path)
+			__panic(err)
+			ldir, _ := filepath.Split(path)
+			bytes, err = a.parseTemplateIncludeDeps(ldir, bytes)
+			__panic(err)
 			if len(a.Config.LocalePath) < 1 {
 				tplInfo := &templateInfo{
 					path:       path,
