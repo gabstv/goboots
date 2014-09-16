@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	//"log"
+	"log"
 	"path"
 	"strings"
 )
@@ -66,7 +66,6 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 							lpath = sptr
 						}
 						//log.Println("name", name)
-						//log.Println("lpath", lpath)
 						if strings.HasPrefix(lpath, "./") {
 							lpath = path.Join(lwd, lpath[1:])
 						} else if strings.HasPrefix(lpath, "../") {
@@ -80,6 +79,7 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 						if !strings.HasPrefix(lpath, basePath) && !strings.HasPrefix(lpath, viewsFolderPath) {
 							return nil, errors.New("partial template path `" + lpath + "` outside of app path `" + basePath + "`!")
 						}
+						log.Println("lpath", lpath)
 						// get raw template
 						childbits, err := ioutil.ReadFile(lpath)
 						if err != nil {
@@ -93,10 +93,10 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 						if len(name) > 0 {
 							// not inline
 							stackb.WriteString("{{define " + name + "}}")
-							fb.Write(childbits)
+							stackb.Write(childbits)
 							stackb.WriteString("{{end}}")
 						} else {
-							stackb.Write(childbits)
+							fb.Write(childbits)
 						}
 						skipb = k2 + 1 - k
 						wb.Reset()
