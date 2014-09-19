@@ -266,7 +266,12 @@ func GetUserLang(w http.ResponseWriter, r *http.Request) string {
 		// break alh
 		alh0 := strings.Split(alh, ",")
 		for _, v := range alh0 {
-			lc := strings.Split(v, ";")[0][0:2]
+			lcd := strings.Split(v, ";")[0]
+			var lc string
+			if len(lcd) >= 2 {
+				lc = lcd[0:2]
+			}
+			lc = lcd
 			if StringIndexOf(validlangs, lc) != -1 {
 				l = lc
 				break
