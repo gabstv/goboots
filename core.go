@@ -104,6 +104,8 @@ type Session struct {
 	Flash   SessFlash `json:"-" bson:"-"` // never save flash
 	Time    time.Time
 	Updated time.Time
+	r       *http.Request
+	w       http.ResponseWriter
 }
 
 type SessFlash struct {
@@ -202,8 +204,17 @@ func (s *Session) GetStringD(key string, defaultValue string) string {
 	return reflect.ValueOf(iface).String()
 }
 
-func (s *Session) Expire(w http.ResponseWriter, t time.Time) {
-	SetCookieAdv(w, "goboots_sessid", s.SID, "/", "", t, 0, false, true)
+func (s *Session) Expire(t time.Time) {
+	SetCookieAdv(s.w, "goboots_sessid", s.SID, "/", "", t, 0, false, true)
+}
+
+func (s *Session) GetExpires() time.Time {
+	cookie, err := s.r.Cookie("goboots_sessid")
+	if err != nil {
+		log.Println("Error @ (s *Session) GetExpires()", err)
+		return time.Now()
+	}
+	return cookie.Expires
 }
 
 func GetSession(w http.ResponseWriter, r *http.Request) *Session {
@@ -220,6 +231,8 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 			// get from a saved location
 			msession, err = curSessionDb.GetSession(sid)
 			if err == nil {
+				msession.r = r
+				msession.w = w
 				return msession
 			}
 			fmt.Printf("SESSION ERROR :( [%s] %s\n", sid, err.Error())
@@ -247,6 +260,8 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 	err = curSessionDb.NewSession(session)
 	__panic(err)
 	SetCookieAdv(w, "goboots_sessid", sid, "/", "", time.Now().AddDate(0, 1, 0), 0, false, true)
+	session.w = w
+	session.r = r
 	return session
 }
 
