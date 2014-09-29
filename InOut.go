@@ -5,8 +5,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"github.com/gabstv/i18ngo"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"reflect"
@@ -35,6 +37,7 @@ type In struct {
 	LangCode      string
 	GlobalTitle   string
 	closers       []io.Closer
+	reqbodyw      *InBodyWrapper
 }
 
 // New clones a new In but without the content.
@@ -51,6 +54,7 @@ func (in *In) New() *In {
 	in2.Controller = in.Controller
 	in2.LangCode = in.LangCode
 	in2.GlobalTitle = in.GlobalTitle
+	in2.reqbodyw = in.reqbodyw
 	return in2
 }
 
@@ -271,6 +275,41 @@ func (in *In) SetNoCache() *In {
 	in.W.Header().Set("Pragma", "no-cache")
 	in.W.Header().Set("Expires", "0")
 	return in
+}
+
+type InBodyWrapper struct {
+	R *http.Request
+}
+
+func (in *In) ReqBody() *InBodyWrapper {
+	if in.reqbodyw == nil {
+		in.reqbodyw = &InBodyWrapper{in.R}
+	}
+	return in.reqbodyw
+}
+
+func (inbw *InBodyWrapper) UnmarshalJSON(v interface{}) error {
+	if inbw.R.Body == nil {
+		return errors.New("request body is null")
+	}
+	defer inbw.R.Body.Close()
+	bs, err := ioutil.ReadAll(inbw.R.Body)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bs, v)
+}
+
+func (inbw *InBodyWrapper) UnmarshalXML(v interface{}) error {
+	if inbw.R.Body == nil {
+		return errors.New("request body is null")
+	}
+	defer inbw.R.Body.Close()
+	bs, err := ioutil.ReadAll(inbw.R.Body)
+	if err != nil {
+		return err
+	}
+	return xml.Unmarshal(bs, v)
 }
 
 type Out struct {

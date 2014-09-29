@@ -495,6 +495,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				ul,
 				i18ngo.TL(ul, app.Config.GlobalPageTitle),
 				make([]io.Closer, 0),
+				&InBodyWrapper{r},
 			}
 			// close all io.Closer if present
 			defer inObj.closeall()
