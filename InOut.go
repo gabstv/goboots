@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"reflect"
 	"text/template"
 )
@@ -286,6 +287,14 @@ func (in *In) ReqBody() *InBodyWrapper {
 		in.reqbodyw = &InBodyWrapper{in.R}
 	}
 	return in.reqbodyw
+}
+
+func (in *In) URLQ() url.Values {
+	return in.R.URL.Query()
+}
+
+func (in *In) FormVal(key string) string {
+	return in.R.FormValue(key)
 }
 
 func (inbw *InBodyWrapper) UnmarshalJSON(v interface{}) error {
