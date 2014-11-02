@@ -28,13 +28,14 @@ func TestApp(t *testing.T) {
 	app.Config.Name = "Test App"
 	app.Config.HostAddr = ":8001"
 	app.Config.GlobalPageTitle = "Test App - "
+	app.Config.OldRouteMethod = true
 	app.InitSessionStorage("sessmemory")
-	r0 := Route{}
+	r0 := OldRoute{}
 	r0.Path = "/"
 	r0.Controller = "testController"
 	r0._t = routeMethodExact
 	r0.Method = "Test"
-	app.Routes = []Route{r0}
+	app.Routes = []OldRoute{r0}
 
 	app.RegisterController(&testController{})
 	app.Filters = []Filter{

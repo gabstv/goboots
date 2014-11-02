@@ -12,7 +12,7 @@ const (
 	routeMethodIgnoreTrail = byte(3)
 )
 
-type Route struct {
+type OldRoute struct {
 	Path        string
 	Controller  string
 	Method      string
@@ -20,7 +20,7 @@ type Route struct {
 	_t          byte
 }
 
-func (route *Route) IsMatch(url string) bool {
+func (route *OldRoute) IsMatch(url string) bool {
 	switch route._t {
 	case routeMethodRegExp:
 		return route.isMatchRegExp(url)
@@ -34,19 +34,19 @@ func (route *Route) IsMatch(url string) bool {
 	return false
 }
 
-func (route *Route) isMatchRegExp(url string) bool {
+func (route *OldRoute) isMatchRegExp(url string) bool {
 	match, _ := regexp.MatchString(route.Path, url)
 	return match
 }
 
-func (route *Route) isMatchExact(url string) bool {
+func (route *OldRoute) isMatchExact(url string) bool {
 	return url == route.Path
 }
 
-func (route *Route) isMatchRemainder(url string) bool {
+func (route *OldRoute) isMatchRemainder(url string) bool {
 	return strings.HasPrefix(url, route.Path)
 }
 
-func (route *Route) isMatchIgnoreTrail(url string) bool {
+func (route *OldRoute) isMatchIgnoreTrail(url string) bool {
 	return strings.TrimRight(url, "/") == route.Path[:len(route.Path)-2]
 }

@@ -36,6 +36,7 @@ type AppConfig struct {
 
 	// Paths
 	RoutesConfigPath string
+	OldRouteMethod   bool // use deprecated route method
 	CachePath        string
 	ViewsFolderPath  string
 	ViewsExtensions  []string // .html, .tpl

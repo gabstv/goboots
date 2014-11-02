@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
+	"github.com/gabstv/revel"
 	"io"
 	"io/ioutil"
 	"log"
@@ -24,7 +25,8 @@ type App struct {
 	// "public"
 	AppConfigPath string
 	Config        AppConfig
-	Routes        []Route
+	Routes        []OldRoute
+	Router        *revel.Router
 	Filters       []Filter
 	ByteCaches    *ByteCacheCollection
 	GenericCaches *GenericCacheCollection
@@ -263,33 +265,12 @@ func (app *App) LoadConfigFile() error {
 	return json.Unmarshal(bytes, &app.Config)
 }
 
-func (app *App) loadConfig() {
-	// setup Random
-	src := rand.NewSource(time.Now().Unix())
-	app.Random = rand.New(src)
-
-	app.basePath, _ = os.Getwd()
+// deprecated routes method
+func (app *App) loadRoutesOld() {
 	var bytes []byte
 	var err error
-	//
-	// LOAD AppConfig.json
-	//
-	if len(app.Config.Name) == 0 {
-		err = app.LoadConfigFile()
-		__panic(err)
-	}
-	// set default views extension if none
-	if len(app.Config.ViewsExtensions) < 1 {
-		app.Config.ViewsExtensions = []string{".tpl", ".html"}
-	}
-
-	// parse Config
-	app.Config.ParseEnv()
-	//
-	// LOAD Routes.json
-	//
 	if app.Routes == nil {
-		app.Routes = make([]Route, 0)
+		app.Routes = make([]OldRoute, 0)
 	}
 	if len(app.Config.RoutesConfigPath) > 0 {
 		// 2014-07-22 Now accepts multiple paths, separated by semicolons
@@ -299,7 +280,7 @@ func (app *App) loadConfig() {
 			fdir := FormatPath(rpath)
 			bytes, err = ioutil.ReadFile(fdir)
 			__panic(err)
-			tempslice := make([]Route, 0)
+			tempslice := make([]OldRoute, 0)
 			if xt := filepath.Ext(fdir); xt == ".dson" {
 				var bf0, bf1 by.Buffer
 				bf0.Write(bytes)
@@ -324,6 +305,41 @@ func (app *App) loadConfig() {
 		} else if strings.HasSuffix(app.Routes[i].Path, "/?") {
 			app.Routes[i]._t = routeMethodIgnoreTrail
 		}
+	}
+}
+
+func (a *App) loadRoutesNew() {
+	a.Router = revel.NewRouter(a.Config.RoutesConfigPath)
+}
+
+func (app *App) loadConfig() {
+	// setup Random
+	src := rand.NewSource(time.Now().Unix())
+	app.Random = rand.New(src)
+
+	app.basePath, _ = os.Getwd()
+	var err error
+	//
+	// LOAD AppConfig.json
+	//
+	if len(app.Config.Name) == 0 {
+		err = app.LoadConfigFile()
+		__panic(err)
+	}
+	// set default views extension if none
+	if len(app.Config.ViewsExtensions) < 1 {
+		app.Config.ViewsExtensions = []string{".tpl", ".html"}
+	}
+
+	// parse Config
+	app.Config.ParseEnv()
+	//
+	// LOAD Routes
+	//
+	if app.Config.OldRouteMethod {
+		app.loadRoutesOld()
+	} else {
+		app.loadRoutesNew()
 	}
 	//
 	// LOAD Localization Files (i18n)
@@ -448,39 +464,136 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, fdir)
 }
 
+func (a *App) oldRouteMatch(niceurl string) *OldRoute {
+	for _, v := range a.Routes {
+		if v.IsMatch(niceurl) {
+			return &v
+		}
+	}
+	return nil
+}
+
+func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWriter, r *http.Request) bool {
+	v := app.oldRouteMatch(niceurl)
+	if v == nil {
+		return false
+	}
+	// enroute based on method
+	c := app.controllerMap[v.Controller]
+	if c == nil {
+		//TODO: display page error instead of panic
+		log.Fatalf("Controller '%s' is not registered!\n", v.Controller)
+	}
+	if v.RedirectTLS {
+		if r.TLS == nil {
+			// redirect to https
+			h0 := strings.Split(r.Host, ":")
+			h1 := strings.Split(app.Config.HostAddrTLS, ":")
+			h0o := h0[0]
+			if len(h1) > 1 {
+				if h1[1] != "443" {
+					h0[0] = h0[0] + ":" + h1[1]
+				}
+			}
+			urls := r.URL.String()
+			if strings.Contains(urls, h0o) {
+				urls = strings.Replace(urls, h0o, "", 1)
+			}
+			log.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
+			http.Redirect(w, r, "https://"+h0[0]+urls, 302)
+			return true
+		}
+	}
+
+	var inObj *In
+	ul := GetUserLang(w, r)
+	inObj = &In{
+		r,
+		w,
+		urlbits,
+		nil,
+		&InContent{},
+		&InContent{},
+		app,
+		c,
+		ul,
+		i18ngo.TL(ul, app.Config.GlobalPageTitle),
+		make([]io.Closer, 0),
+		&InBodyWrapper{r},
+	}
+	// close all io.Closer if present
+	defer inObj.closeall()
+	// run all filters
+	if app.Filters != nil {
+		for _, filter := range app.Filters {
+			if ok := filter(inObj); !ok {
+				return true
+			}
+		}
+	}
+	// run controller pre filter
+	// you may want to run something before all the other methods, this is where you do it
+	prec := c.PreFilter(inObj)
+	if prec == nil {
+		return true
+	} else {
+		if prec.kind != outPre {
+			prec.render(inObj.W)
+			return true
+		}
+	}
+	// run main controller function
+	controllerMethod := v.Method
+	if len(controllerMethod) == 0 {
+		controllerMethod = "Index"
+	}
+	rVal, rValOK := c.getMethod(controllerMethod)
+	if !rValOK {
+		//TODO: display page error instead of panic
+		log.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", v.Controller, v.Method)
+	} else {
+		// finally run it
+		in := make([]reflect.Value, 2)
+		in[0] = reflect.ValueOf(c)
+		in[1] = reflect.ValueOf(inObj)
+		out := rVal.Val.Call(in)
+		o0, _ := (out[0].Interface()).(*Out)
+		if o0 != nil {
+			o0.render(inObj.W)
+		}
+		if inObj.session != nil {
+			inObj.session.Flash.Clear()
+		} else {
+			inObj.Session().Flash.Clear()
+		}
+		return true
+	}
+	inObj.Session().Flash.Clear()
+	return false
+}
+
 func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 	niceurl, _ := url.QueryUnescape(r.URL.String())
 	niceurl = strings.Split(niceurl, "?")[0]
 	urlbits := strings.Split(niceurl, "/")[1:]
-	for _, v := range app.Routes {
-		if v.IsMatch(niceurl) {
+	if app.Config.OldRouteMethod {
+		return app.enrouteOld(niceurl, urlbits, w, r)
+	}
+	if app.Router != nil {
+		match := app.Router.Route(r)
+		if match != nil {
+			if match.Action == "404" {
+				//TODO: clean flash
+				app.DoHTTPError(w, r, 404)
+				return true
+			}
 			// enroute based on method
-			c := app.controllerMap[v.Controller]
+			c := app.controllerMap[match.ControllerName]
 			if c == nil {
 				//TODO: display page error instead of panic
-				log.Fatalf("Controller '%s' is not registered!\n", v.Controller)
+				log.Fatalf("Controller '%s' is not registered!\n", match.ControllerName)
 			}
-			if v.RedirectTLS {
-				if r.TLS == nil {
-					// redirect to https
-					h0 := strings.Split(r.Host, ":")
-					h1 := strings.Split(app.Config.HostAddrTLS, ":")
-					h0o := h0[0]
-					if len(h1) > 1 {
-						if h1[1] != "443" {
-							h0[0] = h0[0] + ":" + h1[1]
-						}
-					}
-					urls := r.URL.String()
-					if strings.Contains(urls, h0o) {
-						urls = strings.Replace(urls, h0o, "", 1)
-					}
-					log.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
-					http.Redirect(w, r, "https://"+h0[0]+urls, 302)
-					return true
-				}
-			}
-
+			//TODO: handle TLS redirect (on revel fork first)
 			var inObj *In
 			ul := GetUserLang(w, r)
 			inObj = &In{
@@ -519,14 +632,14 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				}
 			}
 			// run main controller function
-			controllerMethod := v.Method
+			controllerMethod := match.MethodName
 			if len(controllerMethod) == 0 {
 				controllerMethod = "Index"
 			}
 			rVal, rValOK := c.getMethod(controllerMethod)
 			if !rValOK {
 				//TODO: display page error instead of panic
-				log.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", v.Controller, v.Method)
+				log.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", match.ControllerName, match.MethodName)
 			} else {
 				// finally run it
 				in := make([]reflect.Value, 2)
