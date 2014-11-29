@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"log"
@@ -260,6 +261,8 @@ func (app *App) LoadConfigFile() error {
 		}
 		bytes = bf1.Bytes()
 		log.Println("such program very dson wow")
+	} else if xt == ".yaml" {
+		return yaml.Unmarshal(bytes, &app.Config)
 	}
 	return json.Unmarshal(bytes, &app.Config)
 }

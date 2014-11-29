@@ -6,41 +6,41 @@ import (
 )
 
 type DatabaseConfig struct {
-	Name       string
-	Connection string
-	Host       string
-	Database   string
-	User       string
-	Password   string
+	Name       string `yaml:"Name"`
+	Connection string `yaml:"Connection"`
+	Host       string `yaml:"Host"`
+	Database   string `yaml:"Database"`
+	User       string `yaml:"User"`
+	Password   string `yaml:"Password"`
 }
 
 type AppConfig struct {
-	Name            string
-	GlobalPageTitle string `json:",omitempty"`
-	Version         string
-	HostAddr        string
-	HostAddrTLS     string
-	MongoDbs        string
-	Database        string
-	Databases       map[string]DatabaseConfig
-	SessionDb       interface{}
-	Salt            string
-	LocalePath      string
-	DefaultLanguage string
-	Data            map[string]string
+	Name            string                    `yaml:"Name"`
+	GlobalPageTitle string                    `json:",omitempty"`
+	Version         string                    `yaml:"Version"`
+	HostAddr        string                    `yaml:"HostAddr"`
+	HostAddrTLS     string                    `yaml:"HostAddrTLS"`
+	MongoDbs        string                    `yaml:"MongoDbs"`
+	Database        string                    `yaml:"Database"`
+	Databases       map[string]DatabaseConfig `yaml:"Databases"`
+	SessionDb       interface{}               `yaml:"SessionDb"`
+	Salt            string                    `yaml:"Salt"`
+	LocalePath      string                    `yaml:"LocalePath"`
+	DefaultLanguage string                    `yaml:"DefaultLanguage"`
+	Data            map[string]string         `yaml:"Data"`
 
 	// TLS
-	TLSCertificatePath string
-	TLSKeyPath         string
-	TLSRedirect        bool
+	TLSCertificatePath string `yaml:"TLSCertificatePath"`
+	TLSKeyPath         string `yaml:"TLSKeyPath"`
+	TLSRedirect        bool   `yaml:"TLSRedirect"`
 
 	// Paths
-	RoutesConfigPath string
-	OldRouteMethod   bool // use deprecated route method
-	CachePath        string
-	ViewsFolderPath  string
-	ViewsExtensions  []string // .html, .tpl
-	PublicFolderPath string
+	RoutesConfigPath string   `yaml:"RoutesConfigPath"`
+	OldRouteMethod   bool     `yaml:"OldRouteMethod"` // use deprecated route method
+	CachePath        string   `yaml:"CachePath"`
+	ViewsFolderPath  string   `yaml:"ViewsFolderPath"`
+	ViewsExtensions  []string `yaml:"ViewsExtensions"` // .html, .tpl
+	PublicFolderPath string   `yaml:"PublicFolderPath"`
 }
 
 func (a *AppConfig) ParseEnv() {
