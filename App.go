@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
-	"github.com/gabstv/revel"
 	"io"
 	"io/ioutil"
 	"log"
@@ -26,7 +25,7 @@ type App struct {
 	AppConfigPath string
 	Config        AppConfig
 	Routes        []OldRoute
-	Router        *revel.Router
+	Router        *Router
 	Filters       []Filter
 	ByteCaches    *ByteCacheCollection
 	GenericCaches *GenericCacheCollection
@@ -309,7 +308,9 @@ func (app *App) loadRoutesOld() {
 }
 
 func (a *App) loadRoutesNew() {
-	a.Router = revel.NewRouter(a.Config.RoutesConfigPath)
+	a.Router = NewRouter(a, a.Config.RoutesConfigPath)
+	err := a.Router.Refresh()
+	log.Println(a.Router.Routes, err)
 }
 
 func (app *App) loadConfig() {
@@ -581,6 +582,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 	}
 	if app.Router != nil {
 		match := app.Router.Route(r)
+		log.Println("new router match!", match)
 		if match != nil {
 			if match.Action == "404" {
 				//TODO: clean flash
