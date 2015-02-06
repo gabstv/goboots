@@ -60,10 +60,10 @@ func (m *MongoDBSession) Cleanup(minTime time.Time) {
 	if m.mdb == nil {
 		return
 	}
-	n, _ := m.mdb.C("goboots_sessid").Find(bson.M{"updated": bson.M{"$lt": minTime}}).Count()
-	err := m.mdb.C("goboots_sessid").Remove(bson.M{"updated": bson.M{"$lt": minTime}})
+	//n, _ := m.mdb.C("goboots_sessid").Find(bson.M{"updated": bson.M{"$lt": minTime}}).Count()
+	cnginfo, err := m.mdb.C("goboots_sessid").RemoveAll(bson.M{"updated": bson.M{"$lt": minTime}})
 	if err == nil {
-		log.Println("MongoDBSession::Cleanup ok", n, "entries removed")
+		log.Println("MongoDBSession::Cleanup ok", cnginfo.Removed, "entries removed")
 	} else {
 		log.Println("MongoDBSession::Cleanup error", err)
 	}

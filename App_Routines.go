@@ -55,7 +55,7 @@ func (app *App) routineSessionMaintenance() {
 	time.Sleep(30 * time.Second)
 	log.Println("Session maintenance routine started.")
 	for {
-		curSessionDb.Cleanup(time.Now().AddDate(0, 0, -30))
-		time.Sleep(time.Minute * 30)
+		curSessionDb.Cleanup(time.Now().AddDate(0, 0, -15))
+		time.Sleep(time.Minute * 15)
 	}
 }
