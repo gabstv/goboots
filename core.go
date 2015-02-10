@@ -254,7 +254,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 	if err != nil {
 		log.Println("[FATAL] [curSessionDb.NewSession] Could not get session!", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("The server encountered an error while processing your request [CONN_ERR_GET_SESSION]."))
+		w.Write([]byte("The server encountered an error while processing your request [ERR_CONN_NEW_SESSION]."))
 		return nil
 	}
 	//__panic(err)
