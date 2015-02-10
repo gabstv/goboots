@@ -2,11 +2,11 @@ package goboots
 
 import (
 	"bytes"
+	"code.google.com/p/go-uuid/uuid"
 	"errors"
 	"fmt"
 	"github.com/gabstv/i18ngo"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -241,15 +241,8 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 			fmt.Printf("COULD NOT VALIDATE :( [%s]\n", sid)
 		}
 	}
-	//TODO: improve session generation because it created a duplicate key!
 	// gen session
-	rand.Seed(time.Now().UnixNano())
-	var uuid [16]byte
-	for i := 0; i < 16; i++ {
-		uuid[i] = byte(rand.Intn(255))
-	}
-	// secrets
-	sid = fmt.Sprintf("%x", uuid)
+	sid = uuid.New()
 
 	session := &Session{
 		SID:     sid,
@@ -258,7 +251,13 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 		Updated: time.Now(),
 	}
 	err = curSessionDb.NewSession(session)
-	__panic(err)
+	if err != nil {
+		log.Println("[FATAL] [curSessionDb.NewSession] Could not get session!", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("The server encountered an error while processing your request [CONN_ERR_GET_SESSION]."))
+		return nil
+	}
+	//__panic(err)
 	SetCookieAdv(w, "goboots_sessid", sid, "/", "", time.Now().AddDate(0, 1, 0), 0, false, true)
 	session.w = w
 	session.r = r
@@ -318,13 +317,14 @@ func DestroySession(w http.ResponseWriter, r *http.Request, s *Session) {
 	SetCookieAdv(w, "goboots_sessid", "", "/", "", time.Now(), 1, false, true)
 }
 
+// DEPRECATED
 func _validateSidString(sid string) bool {
-	if len(sid) != 32 {
+	if len(sid) < 32 {
 		return false
 	}
 	for _, c := range sid {
 		// check if sid contains invalid chars
-		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == '-')) {
 			return false
 		}
 	}
