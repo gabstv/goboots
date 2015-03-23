@@ -2,6 +2,7 @@ package goboots
 
 import (
 	by "bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"github.com/gabstv/dson2json"
@@ -43,6 +44,12 @@ type App struct {
 	loadedAll       bool
 }
 
+func (app *App) Logvln(v ...interface{}) {
+	if app.Config.Verbose {
+		log.Println(v...)
+	}
+}
+
 type appHTTP struct {
 	app *App
 }
@@ -78,11 +85,21 @@ func (a *appHTTPS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println("R:", r.URL.String())
 	routed := app.enroute(w, r)
 	//if routes didn't find anything
 	if !routed {
-		app.servePublicFolder(w, r)
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && app.Config.GZipStatic {
+			// use gzip
+			app.Logvln("[REQ GZIP] ", r.URL.String())
+			w.Header().Set("Content-Encoding", "gzip")
+			gz := gzip.NewWriter(w)
+			gzr := &gzipRespWriter{gz, w}
+			app.servePublicFolder(gzr, r)
+			gz.Close()
+		} else {
+			app.Logvln("[REQ] ", r.URL.String())
+			app.servePublicFolder(w, r)
+		}
 	}
 }
 
