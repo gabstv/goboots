@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"text/template"
 )
@@ -24,6 +25,7 @@ const (
 	outTemplateSolo = 4
 	outString       = 5
 	outBytes        = 6
+	outFile         = 7
 )
 
 type In struct {
@@ -265,6 +267,13 @@ func (in *In) OutputBytes(b []byte) *Out {
 	return o
 }
 
+func (in *In) OutputFile(name string) *Out {
+	o := &Out{}
+	o.kind = outFile
+	o.contentStr = name
+	return o
+}
+
 func (in *In) Continue() *Out {
 	o := &Out{}
 	o.kind = outPre
@@ -368,6 +377,38 @@ func (o *Out) render(w http.ResponseWriter) {
 			w.Header().Set("Content-Type", "application/octet-stream; charset=utf-8")
 		}
 		w.Write(o.contentBytes)
+	case outFile:
+		name := o.contentStr
+		if len(w.Header().Get("Content-Type")) < 1 {
+			f, err := os.Open(name)
+			if err != nil {
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.Write([]byte(err.Error()))
+			} else {
+				defer f.Close()
+				firstBytes := make([]byte, 1024)
+				bytesRead, err := f.Read(firstBytes)
+				if err != nil {
+					w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+					w.Write([]byte(err.Error()))
+				} else {
+					w.Header().Set("Content-Type", http.DetectContentType(firstBytes))
+					w.Write(firstBytes[:bytesRead])
+					if bytesRead == 1024 {
+						io.Copy(w, f)
+					}
+				}
+			}
+		} else {
+			f, err := os.Open(name)
+			if err != nil {
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				w.Write([]byte(err.Error()))
+			} else {
+				defer f.Close()
+				io.Copy(w, f)
+			}
+		}
 	}
 }
 
