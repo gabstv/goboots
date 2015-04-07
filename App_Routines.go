@@ -1,21 +1,7 @@
 package goboots
 
 import (
-	//"encoding/json"
-	//"fmt"
-	//"github.com/gabstv/i18ngo"
-	//"io/ioutil"
-	//"labix.org/v2/mgo"
-	"log"
-	//"math/rand"
-	//"net/http"
-	//"net/url"
 	"os"
-	//"path/filepath"
-	//"reflect"
-	//"strings"
-	//"sync"
-	//"text/template"
 	"time"
 )
 
@@ -35,15 +21,15 @@ func (app *App) runRoutines() {
 
 func (app *App) routineTemplateCacheMaitenance() {
 	time.Sleep(10 * time.Second)
-	log.Println("Template cache maitenance routine started.")
+	app.Logger.Println("Template cache maitenance routine started.")
 	for {
 		time.Sleep(120 * time.Second)
-		log.Println("Template cache maitenance pass.")
+		app.Logger.Println("Template cache maitenance pass.")
 		for k, v := range app.templateMap {
 			info, err := os.Stat(v.path)
 			if err == nil {
 				if info.ModTime().After(v.lastUpdate) {
-					log.Println(k + " IS MODIFIED")
+					app.Logger.Println(k + " IS MODIFIED")
 					//TODO: re cache it!
 				}
 			}
@@ -53,7 +39,7 @@ func (app *App) routineTemplateCacheMaitenance() {
 
 func (app *App) routineSessionMaintenance() {
 	time.Sleep(30 * time.Second)
-	log.Println("Session maintenance routine started.")
+	app.Logger.Println("Session maintenance routine started.")
 	for {
 		curSessionDb.Cleanup(time.Now().AddDate(0, 0, -15))
 		time.Sleep(time.Minute * 15)

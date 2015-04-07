@@ -3,7 +3,6 @@ package sessmemory
 import (
 	"errors"
 	"github.com/gabstv/goboots"
-	"log"
 	"time"
 )
 
@@ -70,7 +69,7 @@ func (m *MemoryDbSession) Cleanup(minTime time.Time) {
 	for _, v := range delList {
 		delete(m.sessions, v)
 	}
-	log.Println("MemoryDbSession::Cleanup ok", len(delList), "entries removed")
+	m.app.Logger.Println("MemoryDbSession::Cleanup ok", len(delList), "entries removed")
 }
 
 func (m *MemoryDbSession) Close() {

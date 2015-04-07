@@ -4,7 +4,6 @@ import (
 	"github.com/gabstv/goboots"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
-	"log"
 	"time"
 )
 
@@ -63,9 +62,9 @@ func (m *MongoDBSession) Cleanup(minTime time.Time) {
 	//n, _ := m.mdb.C("goboots_sessid").Find(bson.M{"updated": bson.M{"$lt": minTime}}).Count()
 	cnginfo, err := m.mdb.C("goboots_sessid").RemoveAll(bson.M{"updated": bson.M{"$lt": minTime}})
 	if err == nil {
-		log.Println("MongoDBSession::Cleanup ok", cnginfo.Removed, "entries removed")
+		m.app.Logger.Println("MongoDBSession::Cleanup ok", cnginfo.Removed, "entries removed")
 	} else {
-		log.Println("MongoDBSession::Cleanup error", err)
+		m.app.Logger.Println("MongoDBSession::Cleanup error", err)
 	}
 }
 

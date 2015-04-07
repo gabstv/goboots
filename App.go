@@ -42,11 +42,18 @@ type App struct {
 	didRunRoutines  bool
 	mainChan        chan error
 	loadedAll       bool
+	Logger          Logger
+}
+
+func NewApp() *App {
+	app := &App{}
+	app.Logger = DefaultLogger()
+	return app
 }
 
 func (app *App) Logvln(v ...interface{}) {
 	if app.Config.Verbose {
-		log.Println(v...)
+		app.Logger.Println(v...)
 	}
 }
 
@@ -73,7 +80,7 @@ func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(urls, h0o) {
 			urls = strings.Replace(urls, h0o, "", 1)
 		}
-		log.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
+		a.app.Logger.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
 		http.Redirect(w, r, "https://"+h0[0]+urls, 301)
 		return
 	}
@@ -90,14 +97,14 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !routed {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && app.Config.GZipStatic {
 			// use gzip
-			app.Logvln("[REQ GZIP] ", r.URL.String())
+			app.Logvln("[RGZ] ", r.URL.String())
 			w.Header().Set("Content-Encoding", "gzip")
 			gz := gzip.NewWriter(w)
 			gzr := &gzipRespWriter{gz, w}
 			app.servePublicFolder(gzr, r)
 			gz.Close()
 		} else {
-			app.Logvln("[REQ] ", r.URL.String())
+			app.Logvln("[R] ", r.URL.String())
 			app.servePublicFolder(w, r)
 		}
 	}
@@ -164,7 +171,7 @@ func (a *App) RegisterController(c IController) {
 	//
 	c.Init(a)
 	a.controllerMap[name] = c
-	log.Printf("controller '%s' registered", name)
+	a.Logger.Printf("controller '%s' registered", name)
 }
 
 func (a *App) GetViewTemplate(localpath string) *template.Template {
@@ -182,7 +189,7 @@ func (a *App) GetLocalizedViewTemplate(localpath string, w http.ResponseWriter, 
 	//pieces := strings.Split(localpath, "/")
 	//path := strings.Join(append([]string{a.basePath, a.AppConfigPath, "view"}, pieces...), string(os.PathSeparator))
 	//return a.templateMap[path].data
-	//log.Println("GET-TEMPLATE" + localpath)
+	//a.Logger.Println("GET-TEMPLATE" + localpath)
 	//TODO: fix get/set templates!
 	return a.templateMap[a.Config.ViewsFolderPath+"/"+localpath].data
 }
@@ -249,6 +256,9 @@ func (a *App) loadAll() {
 }
 
 func (app *App) LoadConfigFile() error {
+	if app.Logger == nil {
+		app.Logger = DefaultLogger()
+	}
 	if len(app.AppConfigPath) < 1 {
 		// try to get appconfig path from env
 		app.AppConfigPath = os.Getenv("APPCONFIGPATH")
@@ -277,7 +287,6 @@ func (app *App) LoadConfigFile() error {
 			return err
 		}
 		bytes = bf1.Bytes()
-		log.Println("such program very dson wow")
 	} else if xt == ".yaml" {
 		return yaml.Unmarshal(bytes, &app.Config)
 	}
@@ -310,7 +319,7 @@ func (app *App) loadRoutesOld() {
 			err = json.Unmarshal(bytes, &tempslice)
 			__panic(err)
 			for _, v := range tempslice {
-				log.Println("Route `" + v.Path + "` loaded.")
+				app.Logger.Println("Route `" + v.Path + "` loaded.")
 				app.Routes = append(app.Routes, v)
 			}
 		}
@@ -330,7 +339,7 @@ func (app *App) loadRoutesOld() {
 func (a *App) loadRoutesNew() {
 	a.Router = NewRouter(a, a.Config.RoutesConfigPath)
 	err := a.Router.Refresh()
-	log.Println(a.Router.Routes, err)
+	a.Logger.Println(a.Router.Routes, err)
 }
 
 func (app *App) loadConfig() {
@@ -377,7 +386,7 @@ func (app *App) loadConfig() {
 			return
 		}
 		i18ngo.LoadPoAll(locPath)
-		log.Println("i18n loaded.")
+		app.Logger.Println("i18n loaded.")
 	}
 	//
 	// Setup cache
@@ -406,9 +415,9 @@ func (a *App) loadTemplates() {
 	if a.templateFuncMap == nil {
 		a.templateFuncMap = make(template.FuncMap)
 	}
-	log.Println("loading template files (" + strings.Join(a.Config.ViewsExtensions, ",") + ")")
+	a.Logger.Println("loading template files (" + strings.Join(a.Config.ViewsExtensions, ",") + ")")
 	if len(a.Config.ViewsFolderPath) == 0 {
-		log.Println("ViewsFolderPath is empty")
+		a.Logger.Println("ViewsFolderPath is empty")
 		return
 	}
 	a.templateMap = make(map[string]*templateInfo, 0)
@@ -460,14 +469,14 @@ func (a *App) loadTemplates() {
 	}
 	err := filepath.Walk(fdir, vPath)
 	__panic(err)
-	log.Printf("%d templates loaded (%d bytes)\n", len(a.templateMap), bytesLoaded)
+	a.Logger.Printf("%d templates loaded (%d bytes)\n", len(a.templateMap), bytesLoaded)
 }
 
 func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) {
 	//niceurl, _ := url.QueryUnescape(r.URL.String())
 	niceurl := r.URL.Path
 	//TODO: place that into access log
-	//log.Println("requested " + niceurl)
+	//app.Logger.Println("requested " + niceurl)
 	// after all routes are dealt with
 	//TODO: have an option to have these files in memory
 	fdir := FormatPath(app.Config.PublicFolderPath + "/" + niceurl)
@@ -503,7 +512,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 	c := app.controllerMap[v.Controller]
 	if c == nil {
 		//TODO: display page error instead of panic
-		log.Fatalf("Controller '%s' is not registered!\n", v.Controller)
+		app.Logger.Fatalf("Controller '%s' is not registered!\n", v.Controller)
 	}
 	if v.RedirectTLS {
 		if r.TLS == nil {
@@ -520,7 +529,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 			if strings.Contains(urls, h0o) {
 				urls = strings.Replace(urls, h0o, "", 1)
 			}
-			log.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
+			app.Logger.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
 			http.Redirect(w, r, "https://"+h0[0]+urls, 302)
 			return true
 		}
@@ -571,7 +580,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 	rVal, rValOK := c.getMethod(controllerMethod)
 	if !rValOK {
 		//TODO: display page error instead of panic
-		log.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", v.Controller, v.Method)
+		app.Logger.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", v.Controller, v.Method)
 	} else {
 		// finally run it
 		in := make([]reflect.Value, 2)
@@ -602,7 +611,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 	}
 	if app.Router != nil {
 		match := app.Router.Route(r)
-		log.Println("new router match!", match)
+		app.Logger.Println("new router match!", match)
 		if match != nil {
 			if match.Action == "404" {
 				//TODO: clean flash
@@ -613,7 +622,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			c := app.controllerMap[match.ControllerName]
 			if c == nil {
 				//TODO: display page error instead of panic
-				log.Fatalf("Controller '%s' is not registered!\n", match.ControllerName)
+				app.Logger.Fatalf("Controller '%s' is not registered!\n", match.ControllerName)
 			}
 			//TODO: handle TLS redirect (on revel fork first)
 			var inObj *In
@@ -709,7 +718,7 @@ func (a *App) registerControllerMethods(c IController) {
 		if outp != 1 {
 			continue
 		}
-		//log.Printf("Method: %s, IN:%d, OUT:%d", name, inpt, outp)
+		//a.Logger.Printf("Method: %s, IN:%d, OUT:%d", name, inpt, outp)
 		methodOut := mt.Out(0)
 		if methodOut.Kind() != reflect.Ptr {
 			continue
@@ -729,7 +738,7 @@ func (a *App) registerControllerMethods(c IController) {
 		}
 		//
 		if mt.In(1).Elem() != inType {
-			//log.Println(mt.In(1).Elem().String(), "is not", inType.String())
+			//a.Logger.Println(mt.In(1).Elem().String(), "is not", inType.String())
 			continue
 		}
 		c.registerMethod(name, m.Func)

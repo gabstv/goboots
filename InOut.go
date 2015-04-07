@@ -9,7 +9,6 @@ import (
 	"github.com/gabstv/i18ngo"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -101,12 +100,12 @@ func (c *InContent) Merge(v interface{}) *InContent {
 	if vtype.Kind() == reflect.Ptr {
 		vl = vl.Elem()
 		vtype = vtype.Elem()
-		log.Println(vl.Kind().String())
+		//log.Println(vl.Kind().String())
 	}
 	if vtype.Kind() == reflect.Map {
 		// merge mappy things
 		if vtype.Key().Kind() != reflect.String {
-			log.Println("MAP KEY IS NOT A STRING!")
+			//log.Println("MAP KEY IS NOT A STRING!")
 			return c
 		}
 		keys := vl.MapKeys()

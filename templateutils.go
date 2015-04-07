@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"log"
 	"path"
 	"strings"
 )
@@ -31,14 +30,13 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 			skipb--
 			continue
 		}
-		//log.Println(string(v), k, tlen-13)
+
 		if v == '{' && k < tlen-13 {
-			//log.Println("possible match!")
-			//log.Println("`"+string(template[k:k+10])+"`", "`"+string(partialb)+"`")
+
 			if bytes.Compare(template[k:k+10], partialb) == 0 {
 				// we got a match
 				k2 := k + 10
-				//log.Println("match at", k2, template[k2])
+
 				for {
 					if k2 >= tlen {
 						// EOF!
@@ -54,7 +52,6 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 						}
 						// finalize
 						sptr := strings.TrimSpace(wb.String())
-						//log.Println("sptr", sptr)
 						name := ""
 						lpath := ""
 						if sptr[0] == '"' {
@@ -65,7 +62,6 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 							// inline
 							lpath = sptr
 						}
-						//log.Println("name", name)
 						if strings.HasPrefix(lpath, "./") {
 							lpath = path.Join(lwd, lpath[1:])
 						} else if strings.HasPrefix(lpath, "../") {
@@ -79,7 +75,6 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 						if !strings.HasPrefix(lpath, basePath) && !strings.HasPrefix(lpath, viewsFolderPath) {
 							return nil, errors.New("partial template path `" + lpath + "` outside of app path `" + basePath + "`!")
 						}
-						log.Println("lpath", lpath)
 						// get raw template
 						childbits, err := ioutil.ReadFile(lpath)
 						if err != nil {

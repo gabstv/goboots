@@ -24,7 +24,7 @@ func (t *testController) Test(in *In) *Out {
 
 func TestApp(t *testing.T) {
 	RegisterSessionStorageDriver("sessmemory", &testDBSession{})
-	var app App
+	app := NewApp()
 	app.Config.Name = "Test App"
 	app.Config.HostAddr = ":8001"
 	app.Config.GlobalPageTitle = "Test App - "
@@ -58,7 +58,7 @@ func TestApp(t *testing.T) {
 	//t.Log(string(b), len(b))
 
 	if string(b) != `{"success":true,"error":""}` {
-		t.Fatal("expected output mismatch!")
+		t.Fatal("expected output mismatch!", string(b), `{"success":true,"error":""}`)
 	}
 
 	cl := &http.Client{}
@@ -77,12 +77,11 @@ func TestApp(t *testing.T) {
 	//t.Log(b, len(b))
 
 	if bytes.Compare(b, []byte{
-		31, 139, 8, 0, 0, 9, 110, 136, 0, 255, 170, 86, 42, 46, 77, 78,
-		78, 45, 46, 86, 178, 42, 41, 42, 77, 213, 81, 74, 45, 42, 202, 47,
-		82, 178, 82, 82, 170, 5, 4, 0, 0, 255, 255, 234, 150, 84, 37, 27,
-		0, 0, 0,
+		123, 34, 115, 117, 99, 99, 101, 115,
+		115, 34, 58, 116, 114, 117, 101, 44,
+		34, 101, 114, 114, 111, 114, 34, 58, 34, 34, 125,
 	}) != 0 {
-		t.Fatal("gzipped output mismatch!")
+		t.Fatal("gzipped output mismatch!", b)
 	}
 }
 
