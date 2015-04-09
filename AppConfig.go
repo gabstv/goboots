@@ -42,9 +42,11 @@ type AppConfig struct {
 	ViewsExtensions  []string `yaml:"ViewsExtensions"` // .html, .tpl
 	PublicFolderPath string   `yaml:"PublicFolderPath"`
 
-	Verbose     bool
-	GZipDynamic bool
-	GZipStatic  bool
+	StaticAccessLog  bool
+	DynamicAccessLog bool
+	Verbose          bool
+	GZipDynamic      bool
+	GZipStatic       bool
 }
 
 func (a *AppConfig) ParseEnv() {

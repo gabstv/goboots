@@ -97,14 +97,18 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !routed {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && app.Config.GZipStatic {
 			// use gzip
-			app.Logvln("[RGZ] ", r.URL.String())
+			if app.Config.StaticAccessLog {
+				app.Logger.Println("[RGZ] ", r.URL.String())
+			}
 			w.Header().Set("Content-Encoding", "gzip")
 			gz := gzip.NewWriter(w)
 			gzr := &gzipRespWriter{gz, w}
 			app.servePublicFolder(gzr, r)
 			gz.Close()
 		} else {
-			app.Logvln("[R] ", r.URL.String())
+			if app.Config.StaticAccessLog {
+				app.Logger.Println("[R] ", r.URL.String())
+			}
 			app.servePublicFolder(w, r)
 		}
 	}
