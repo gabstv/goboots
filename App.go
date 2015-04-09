@@ -107,7 +107,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			gz.Close()
 		} else {
 			if app.Config.StaticAccessLog {
-				app.Logger.Println("[R] ", r.URL.String())
+				app.Logger.Println("[ R ] ", r.URL.String())
 			}
 			app.servePublicFolder(w, r)
 		}
