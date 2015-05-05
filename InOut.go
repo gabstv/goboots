@@ -168,6 +168,9 @@ func (in *In) T(format string, v ...interface{}) string {
 
 func (in *In) Session() *Session {
 	if in.session == nil {
+		if in.W == nil || in.R == nil {
+			return nil
+		}
 		in.session = GetSession(in.W, in.R)
 	}
 	return in.session
