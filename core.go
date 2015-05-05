@@ -173,6 +173,9 @@ func (s *Session) GetBoolD(key string, defaultValue bool) bool {
 }
 
 func (s *Session) GetInt32(key string) (int, bool) {
+	if s.Data == nil {
+		return 0, false
+	}
 	iface, ok := s.Data[key]
 	if !ok {
 		return 0, false
@@ -181,6 +184,9 @@ func (s *Session) GetInt32(key string) (int, bool) {
 }
 
 func (s *Session) GetInt32D(key string, defaultValue int) int {
+	if s.Data == nil {
+		return defaultValue
+	}
 	iface, ok := s.Data[key]
 	if !ok {
 		return defaultValue
@@ -189,6 +195,9 @@ func (s *Session) GetInt32D(key string, defaultValue int) int {
 }
 
 func (s *Session) GetString(key string) (string, bool) {
+	if s.Data == nil {
+		return "", false
+	}
 	iface, ok := s.Data[key]
 	if !ok {
 		return "", false
@@ -197,6 +206,9 @@ func (s *Session) GetString(key string) (string, bool) {
 }
 
 func (s *Session) GetStringD(key string, defaultValue string) string {
+	if s.Data == nil {
+		return defaultValue
+	}
 	iface, ok := s.Data[key]
 	if !ok {
 		return defaultValue
