@@ -218,6 +218,9 @@ func (s *Session) GetExpires() time.Time {
 }
 
 func GetSession(w http.ResponseWriter, r *http.Request) *Session {
+	if w == nil || r == nil {
+		return nil
+	}
 	initAnySessionStorage()
 	var cookie *http.Cookie
 	var sid string
