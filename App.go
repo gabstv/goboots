@@ -23,7 +23,7 @@ import (
 )
 
 type App struct {
-	// "public"
+	// public
 	AppConfigPath string
 	Config        AppConfig
 	Routes        []OldRoute
@@ -32,7 +32,7 @@ type App struct {
 	ByteCaches    *ByteCacheCollection
 	GenericCaches *GenericCacheCollection
 	Random        *rand.Rand
-	// "private"
+	// private
 	controllerMap   map[string]IController
 	templateMap     map[string]*templateInfo
 	templateFuncMap template.FuncMap
