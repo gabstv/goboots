@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
+	"golang.org/x/net/websocket"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -515,8 +516,9 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 	// enroute based on method
 	c := app.controllerMap[v.Controller]
 	if c == nil {
-		//TODO: display page error instead of panic
 		app.Logger.Fatalf("Controller '%s' is not registered!\n", v.Controller)
+		app.DoHTTPError(w, r, 501)
+		return true
 	}
 	if v.RedirectTLS {
 		if r.TLS == nil {
@@ -544,6 +546,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 	inObj = &In{
 		r,
 		w,
+		nil,
 		urlbits,
 		nil,
 		&InContent{},
@@ -554,56 +557,23 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 		i18ngo.TL(ul, app.Config.GlobalPageTitle),
 		make([]io.Closer, 0),
 		&InBodyWrapper{r},
+		v.Controller,
+		v.Method,
 	}
-	// close all io.Closer if present
-	defer inObj.closeall()
-	// run all filters
-	if app.Filters != nil {
-		for _, filter := range app.Filters {
-			if ok := filter(inObj); !ok {
-				return true
-			}
-		}
-	}
-	// run controller pre filter
-	// you may want to run something before all the other methods, this is where you do it
-	prec := c.PreFilter(inObj)
-	if prec == nil {
-		return true
-	} else {
-		if prec.kind != outPre {
-			prec.render(inObj.W)
-			return true
-		}
-	}
-	// run main controller function
-	controllerMethod := v.Method
-	if len(controllerMethod) == 0 {
-		controllerMethod = "Index"
-	}
-	rVal, rValOK := c.getMethod(controllerMethod)
-	if !rValOK {
-		//TODO: display page error instead of panic
-		app.Logger.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", v.Controller, v.Method)
-	} else {
-		// finally run it
-		in := make([]reflect.Value, 2)
-		in[0] = reflect.ValueOf(c)
-		in[1] = reflect.ValueOf(inObj)
-		out := rVal.Val.Call(in)
-		o0, _ := (out[0].Interface()).(*Out)
-		if o0 != nil {
-			o0.render(inObj.W)
-		}
-		if inObj.session != nil {
-			inObj.session.Flash.Clear()
-		} else {
-			inObj.Session().Flash.Clear()
-		}
+
+	upgrade := r.Header.Get("Upgrade")
+	if upgrade == "websocket" || upgrade == "Websocket" {
+		websocket.Handler(func(ws *websocket.Conn) {
+			// overwrite Read/Write timeout to something reasobnable for a websocket
+			ws.SetDeadline(time.Now().Add(time.Hour * 24))
+			r.Method = "WS"
+			inObj.Wsock = ws
+			app.handleReq(c, inObj)
+		}).ServeHTTP(w, r)
 		return true
 	}
-	inObj.Session().Flash.Clear()
-	return false
+
+	return app.handleReq(c, inObj)
 }
 
 func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
@@ -625,8 +595,10 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			// enroute based on method
 			c := app.controllerMap[match.ControllerName]
 			if c == nil {
-				//TODO: display page error instead of panic
+				// Internal Server Error
 				app.Logger.Fatalf("Controller '%s' is not registered!\n", match.ControllerName)
+				app.DoHTTPError(w, r, 501)
+				return true
 			}
 			//TODO: handle TLS redirect (on revel fork first)
 			var inObj *In
@@ -634,6 +606,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			inObj = &In{
 				r,
 				w,
+				nil,
 				urlbits,
 				nil,
 				&InContent{},
@@ -644,59 +617,77 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				i18ngo.TL(ul, app.Config.GlobalPageTitle),
 				make([]io.Closer, 0),
 				&InBodyWrapper{r},
+				match.ControllerName,
+				match.MethodName,
 			}
-			// close all io.Closer if present
-			defer inObj.closeall()
-			// run all filters
-			if app.Filters != nil {
-				for _, filter := range app.Filters {
-					if ok := filter(inObj); !ok {
-						return true
-					}
-				}
-			}
-			// run controller pre filter
-			// you may want to run something before all the other methods, this is where you do it
-			prec := c.PreFilter(inObj)
-			if prec == nil {
-				return true
-			} else {
-				if prec.kind != outPre {
-					prec.render(inObj.W)
-					return true
-				}
-			}
-			// run main controller function
-			controllerMethod := match.MethodName
-			if len(controllerMethod) == 0 {
-				controllerMethod = "Index"
-			}
-			rVal, rValOK := c.getMethod(controllerMethod)
-			if !rValOK {
-				//TODO: display page error instead of panic
-				log.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", match.ControllerName, match.MethodName)
-			} else {
-				// finally run it
-				in := make([]reflect.Value, 2)
-				in[0] = reflect.ValueOf(c)
-				in[1] = reflect.ValueOf(inObj)
-				out := rVal.Val.Call(in)
-				o0, _ := (out[0].Interface()).(*Out)
-				if o0 != nil {
-					o0.render(inObj.W)
-				}
-				if inObj.session != nil {
-					inObj.session.Flash.Clear()
-				} else {
-					inObj.Session().Flash.Clear()
-				}
+
+			upgrade := r.Header.Get("Upgrade")
+			if upgrade == "websocket" || upgrade == "Websocket" {
+				websocket.Handler(func(ws *websocket.Conn) {
+					// overwrite Read/Write timeout to something reasobnable for a websocket
+					ws.SetDeadline(time.Now().Add(time.Hour * 24))
+					r.Method = "WS"
+					inObj.Wsock = ws
+					app.handleReq(c, inObj)
+				}).ServeHTTP(w, r)
 				return true
 			}
-			inObj.Session().Flash.Clear()
-			return false
+
+			return app.handleReq(c, inObj)
 		}
 	}
 	return false
+}
+
+func (app *App) handleReq(c IController, in *In) bool {
+	defer in.closeall()
+	// run all filters
+	if app.Filters != nil {
+		for _, filter := range app.Filters {
+			if ok := filter(in); !ok {
+				return true
+			}
+		}
+	}
+	// run controller pre filter
+	// you may want to run something before all the other methods, this is where you do it
+	prec := c.PreFilter(in)
+	if prec == nil {
+		return true
+	} else {
+		if prec.kind != outPre {
+			prec.render(in.W)
+			return true
+		}
+	}
+
+	// run main controller function
+	controllerMethod := in.methodName
+	if len(controllerMethod) == 0 {
+		controllerMethod = "Index"
+	}
+	rVal, rValOK := c.getMethod(controllerMethod)
+	if !rValOK {
+		//TODO: display page error instead of panic
+		log.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", in.controllerName, in.methodName)
+		app.DoHTTPError(in.W, in.R, 501)
+		return true
+	}
+	// finally run it
+	inz := make([]reflect.Value, 2)
+	inz[0] = reflect.ValueOf(c)
+	inz[1] = reflect.ValueOf(in)
+	out := rVal.Val.Call(inz)
+	o0, _ := (out[0].Interface()).(*Out)
+	if o0 != nil {
+		o0.render(in.W)
+	}
+	if in.session != nil {
+		in.session.Flash.Clear()
+	} else {
+		in.Session().Flash.Clear()
+	}
+	return true
 }
 
 func (a *App) registerControllerMethods(c IController) {

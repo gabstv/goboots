@@ -3,6 +3,7 @@ package goboots
 import (
 	"bytes"
 	"errors"
+	"golang.org/x/net/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -22,6 +23,22 @@ func (t *testController) Test(in *In) *Out {
 	return in.OutputJSON(v)
 }
 
+func (t *testController) TestWebsocket(in *In) *Out {
+	msg := make([]byte, 512)
+	n, err := in.Wsock.Read(msg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Receive: %s\n", msg[:n])
+
+	m, err := in.Wsock.Write(msg[:n])
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Sent: %s\n", msg[:m])
+	return nil
+}
+
 func TestApp(t *testing.T) {
 	RegisterSessionStorageDriver("sessmemory", &testDBSession{})
 	app := NewApp()
@@ -35,7 +52,13 @@ func TestApp(t *testing.T) {
 	r0.Controller = "testController"
 	r0._t = routeMethodExact
 	r0.Method = "Test"
-	app.Routes = []OldRoute{r0}
+	// ws
+	r1 := OldRoute{}
+	r1.Path = "/ws"
+	r1.Controller = "testController"
+	r1._t = routeMethodExact
+	r1.Method = "TestWebsocket"
+	app.Routes = []OldRoute{r0, r1}
 
 	app.RegisterController(&testController{})
 	app.Filters = []Filter{
@@ -83,6 +106,23 @@ func TestApp(t *testing.T) {
 	}) != 0 {
 		t.Fatal("gzipped output mismatch!", b)
 	}
+
+	// test websocket
+	ws, err := websocket.Dial("ws://localhost:8001/ws", "", "http://localhost/")
+	if err != nil {
+		t.Fatal("could not dial (websocket)", err)
+	}
+	message := []byte("hello, websocket!")
+	_, err = ws.Write(message)
+	if err != nil {
+		t.Fatal("could not write (websocket)", err)
+	}
+	var msg = make([]byte, 512)
+	n, err := ws.Read(msg)
+	if err != nil {
+		t.Fatal("could not read (websocket)", err)
+	}
+	t.Log(string(msg[:n]))
 }
 
 type testDBSession struct {

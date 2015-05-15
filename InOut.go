@@ -7,6 +7,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"github.com/gabstv/i18ngo"
+	"golang.org/x/net/websocket"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -28,18 +29,21 @@ const (
 )
 
 type In struct {
-	R             *http.Request
-	W             http.ResponseWriter
-	URLParts      []string
-	session       *Session
-	Content       *InContent
-	LayoutContent *InContent
-	App           *App
-	Controller    IController
-	LangCode      string
-	GlobalTitle   string
-	closers       []io.Closer
-	reqbodyw      *InBodyWrapper
+	R              *http.Request
+	W              http.ResponseWriter
+	Wsock          *websocket.Conn
+	URLParts       []string
+	session        *Session
+	Content        *InContent
+	LayoutContent  *InContent
+	App            *App
+	Controller     IController
+	LangCode       string
+	GlobalTitle    string
+	closers        []io.Closer
+	reqbodyw       *InBodyWrapper
+	controllerName string
+	methodName     string
 }
 
 // New clones a new In but without the content.
