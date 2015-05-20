@@ -666,10 +666,14 @@ func (app *App) handleReq(c IController, in *In) bool {
 	if len(controllerMethod) == 0 {
 		controllerMethod = "Index"
 	}
+	if c == nil {
+		log.Println("[FATAL] Controller '%s %s' is null.", in.controllerName, in.methodName)
+		app.DoHTTPError(in.W, in.R, 501)
+		return true
+	}
 	rVal, rValOK := c.getMethod(controllerMethod)
 	if !rValOK {
-		//TODO: display page error instead of panic
-		log.Fatalf("Controller '%s' does not contain a method '%s', or it's not valid.", in.controllerName, in.methodName)
+		log.Println("[FATAL] Controller '%s' does not contain a method '%s', or it's not valid.", in.controllerName, in.methodName)
 		app.DoHTTPError(in.W, in.R, 501)
 		return true
 	}
