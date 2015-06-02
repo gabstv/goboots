@@ -28,12 +28,12 @@ func (w gzipRespWriter) Write(b []byte) (int, error) {
 func CompressFilter(in *In) bool {
 	if !strings.Contains(in.R.Header.Get("Accept-Encoding"), "gzip") || !in.App.Config.GZipDynamic {
 		if in.App.Config.DynamicAccessLog {
-			in.App.Logger.Println("{ R } ", in.R.RequestURI)
+			in.App.Logger.Println("{ R } ", in.R.RemoteAddr, in.R.RequestURI)
 		}
 		return true
 	}
 	if in.App.Config.DynamicAccessLog {
-		in.App.Logger.Println("{RGZ} ", in.R.RequestURI)
+		in.App.Logger.Println("{RGZ} ", in.R.RemoteAddr, in.R.RequestURI)
 	}
 	in.W.Header().Set("Content-Encoding", "gzip")
 	gz := gzip.NewWriter(in.W)
