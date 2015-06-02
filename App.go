@@ -99,7 +99,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && app.Config.GZipStatic {
 			// use gzip
 			if app.Config.StaticAccessLog {
-				app.Logger.Println("[RGZ] ", r.RemoteAddr, r.URL.String())
+				app.Logger.Println(hostonly(r.RemoteAddr), "[RGZ] ", r.URL.String())
 			}
 			w.Header().Set("Content-Encoding", "gzip")
 			gz := gzip.NewWriter(w)
@@ -108,7 +108,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			gz.Close()
 		} else {
 			if app.Config.StaticAccessLog {
-				app.Logger.Println("[ R ] ", r.RemoteAddr, r.URL.String())
+				app.Logger.Println(hostonly(r.RemoteAddr), "[ R ] ", r.URL.String())
 			}
 			app.servePublicFolder(w, r)
 		}

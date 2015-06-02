@@ -14,6 +14,7 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"net"
 )
 
 const (
@@ -27,6 +28,11 @@ var (
 	curSessionDb ISessionDBEngine
 	controllers  []IController
 )
+
+func hostonly(hostport string) string {
+	h, _, _ := net.SplitHostPort(hostport)
+	return h
+}
 
 func RegisterController(controller IController) {
 	//TODO: error if controller with same name exists!
