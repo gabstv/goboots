@@ -359,11 +359,11 @@ func (o *Out) mustb(b []byte, err error) []byte {
 func (o *Out) render(w http.ResponseWriter) {
 	switch o.kind {
 	case outJSON:
-		defer func(){
+		defer func() {
 			if r := recover(); r != nil {
 				DefaultLogger().Println("outJSON recover", r, o.contentObj)
 			}
-		}
+		}()
 		if len(w.Header().Get("Content-Type")) < 1 {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		}
