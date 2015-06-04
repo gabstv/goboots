@@ -6,6 +6,7 @@ Go View Controller Web Framework
 Very early stage of development, so expect a lot of changes.
 
 ## TODO:
+- Change Websocket implementation to [Gorilla](https://github.com/gorilla/websocket)
 - Setup documentation
 - Setup starter project
 - Add example projects
