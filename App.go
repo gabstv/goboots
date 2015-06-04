@@ -570,6 +570,10 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 
 	upgrade := r.Header.Get("Upgrade")
 	if upgrade == "websocket" || upgrade == "Websocket" {
+		if r.Method != "GET" {
+			http.Error(w, "Method not allowed", 405)
+			return true
+		}
 		websocket.Handler(func(ws *websocket.Conn) {
 			// overwrite Read/Write timeout to something reasobnable for a websocket
 			ws.SetDeadline(time.Now().Add(time.Hour * 24))
