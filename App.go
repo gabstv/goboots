@@ -259,13 +259,6 @@ func (a *App) loadAll() error {
 		return nil
 	}
 
-	// load routes if they were added statically
-	if controllers != nil {
-		for _, v := range controllers {
-			a.RegisterController(v)
-		}
-	}
-
 	a.entryHTTP = &appHTTP{a}
 	a.entryHTTPS = &appHTTPS{a}
 	err := a.loadConfig()

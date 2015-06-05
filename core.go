@@ -26,7 +26,6 @@ const (
 var (
 	sessionDbs       map[string]ISessionDBEngine
 	curSessionDb     ISessionDBEngine
-	controllers      []IController
 	httpErrorStrings = map[int]string{
 		400: "Bad Request",
 		401: "Unauthorized",
@@ -67,14 +66,6 @@ func (c *count32) get() int32 {
 func hostonly(hostport string) string {
 	h, _, _ := net.SplitHostPort(hostport)
 	return h
-}
-
-func RegisterController(controller IController) {
-	//TODO: error if controller with same name exists!
-	if controllers == nil {
-		controllers = make([]IController, 0)
-	}
-	controllers = append(controllers, controller)
 }
 
 func RegisterSessionStorageDriver(name string, engine ISessionDBEngine) {
