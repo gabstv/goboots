@@ -37,3 +37,5 @@ BenchmarkGoboots_Route3000	  100000	     15850 ns/op
 BenchmarkGoboots_Middleware	  200000	     13594 ns/op
 BenchmarkGoboots_Composite	  100000	     13935 ns/op
 ```
+
+[Comparison with popular Go web frameworks](https://github.com/gabstv/golang-mux-benchmark)
