@@ -271,15 +271,6 @@ func validateRoute(route *Route) error {
 
 // routeError adds context to a simple error message.
 func routeError(err error, routesPath, content string, n int) error {
-	// Load the route file content if necessary
-	if content == "" {
-		contentBytes, err := ioutil.ReadFile(routesPath)
-		if err != nil {
-			log.Printf("Failed to read route file %s: %s\n", routesPath, err)
-		} else {
-			content = string(contentBytes)
-		}
-	}
 	return errors.New("Route validation error; " + err.Error() + "; " + routesPath + "; line " + fmt.Sprintf("%v", n+1))
 }
 

@@ -478,7 +478,7 @@ func (a *App) AddRouteLine(line string) error {
 	if strings.HasSuffix(joinedPath, "/") && strings.HasPrefix(path, "/") {
 		joinedPath = joinedPath[0 : len(joinedPath)-1]
 	}
-	path = strings.Join([]string{AppRoot, joinedPath, path}, "")
+	path = strings.Join([]string{joinedPath, path}, "")
 
 	route := NewRoute(method, path, action, fixedArgs, "memory", len(a.Router.Routes), a)
 	a.Router.Routes = append(a.Router.Routes, route)
