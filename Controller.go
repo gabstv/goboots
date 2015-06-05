@@ -5,9 +5,10 @@ import (
 )
 
 type IController interface {
+	SetApp(app *App)
 	GetPageTitle() string
 	GetLayoutName() string
-	Init(app *App)
+	Init()
 	PreFilter(in *In) *Out
 	registerMethod(name string, method reflect.Value)
 	getMethod(name string) (controllerMethod, bool)
@@ -65,8 +66,11 @@ func (c *Controller) GetLayoutName() string {
 	return c.Layout
 }
 
-func (c *Controller) Init(app *App) {
+func (c *Controller) SetApp(app *App) {
 	c.App = app
+}
+
+func (c *Controller) Init() {
 	c.PageTitle = ""
 	c.Layout = "default"
 	c.ContentType = "text/html; charset=utf-8"

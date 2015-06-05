@@ -8,8 +8,8 @@ type AppController struct {
 	goboots.Controller
 }
 
-func (c *AppController) Init(app *goboots.App) {
-	c.Controller.Init(app)
+func (c *AppController) Init() {
+	c.Controller.Init()
 	// initialization logic here
 }
 

@@ -8,8 +8,8 @@ type HomeController struct {
 	AppController
 }
 
-func (c *HomeController) Init(app *goboots.App) {
-	c.AppController.Init(app)
+func (c *HomeController) Init() {
+	c.AppController.Init()
 }
 
 func (c *HomeController) PreFilter(in *goboots.In) *goboots.Out {

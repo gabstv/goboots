@@ -170,6 +170,7 @@ func (app *App) listenTLS() {
 }
 
 func (a *App) RegisterController(c IController) {
+	c.SetApp(a)
 	v := reflect.ValueOf(c)
 	//pt := v.Type()
 	t := v.Elem().Type()
@@ -182,7 +183,7 @@ func (a *App) RegisterController(c IController) {
 	// Register methods
 
 	//
-	c.Init(a)
+	c.Init()
 	a.controllerMap[name] = c
 	a.Logger.Printf("controller '%s' registered", name)
 }
