@@ -141,3 +141,33 @@ func BenchmarkGoboots_Route300(b *testing.B) {
 func BenchmarkGoboots_Route3000(b *testing.B) {
 	benchmarkRoutesN(b, 200, gobootsRouterFor)
 }
+
+func BenchmarkGoboots_Middleware(b *testing.B) {
+	myFilter := func(in *In) bool {
+		return true
+	}
+
+	app := NewApp()
+	app.Config = &AppConfig{
+		Name:            "Benchmark",
+		HostAddr:        ":19019",
+		GlobalPageTitle: "Benchmark - ",
+	}
+
+	app.Filters = []Filter{myFilter, myFilter, myFilter, myFilter, myFilter, myFilter}
+
+	app.RegisterController(&BenchmarkController{})
+	app.AddRouteLine("GET / BenchmarkController.Bench")
+	app.loadAll()
+	//app.runRoutines()
+
+	w, r := testRequest("GET", "/")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		app.ServeHTTP(w, r)
+		if w.Code != 200 {
+			panic("no good")
+		}
+	}
+}
