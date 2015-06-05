@@ -23,9 +23,10 @@ const (
 )
 
 var (
-	sessionDbs       map[string]ISessionDBEngine
-	curSessionDb     ISessionDBEngine
-	httpErrorStrings = map[int]string{
+	staticControllers []IController
+	sessionDbs        map[string]ISessionDBEngine
+	curSessionDb      ISessionDBEngine
+	httpErrorStrings  = map[int]string{
 		400: "Bad Request",
 		401: "Unauthorized",
 		403: "Forbidden",
@@ -48,6 +49,13 @@ func RegisterSessionStorageDriver(name string, engine ISessionDBEngine) {
 		sessionDbs = make(map[string]ISessionDBEngine, 0)
 	}
 	sessionDbs[name] = engine
+}
+
+func RegisterControllerGlobal(controller IController) {
+	if staticControllers == nil {
+		staticControllers = make([]IController, 0)
+	}
+	staticControllers = append(staticControllers, controller)
 }
 
 func (app *App) InitSessionStorage(driver string) error {

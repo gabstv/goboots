@@ -271,6 +271,14 @@ func (a *App) loadAll() error {
 	if err != nil {
 		return errors.New("loadAll " + err.Error())
 	}
+
+	// load globally registered controllers
+	if staticControllers != nil {
+		for _, v := range staticControllers {
+			a.RegisterController(v)
+		}
+	}
+
 	a.loadedAll = true
 	return nil
 }

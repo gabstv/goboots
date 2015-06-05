@@ -1,0 +1,20 @@
+package main
+
+import (
+	_ "./controller"
+	"github.com/gabstv/goboots"
+	"log"
+)
+
+func main() {
+	app := goboots.NewApp()
+	app.AppConfigPath = "config/AppConfig.yaml"
+	err := app.LoadConfigFile()
+	if err != nil {
+		log.Fatalln("Configuration Error", err)
+	}
+	err = app.Listen()
+	if err != nil {
+		log.Fatalln("app.Listen Error", err)
+	}
+}

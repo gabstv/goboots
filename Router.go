@@ -59,6 +59,8 @@ type RouteMatch struct {
 	Params         Params // e.g. {id: 123}
 }
 
+var routeMatchNotFound = &RouteMatch{Action: "404"}
+
 type arg struct {
 	name       string
 	index      int
@@ -116,8 +118,6 @@ type Router struct {
 	app    *App
 }
 
-var notFound = &RouteMatch{Action: "404"}
-
 func (router *Router) Route(req *http.Request) *RouteMatch {
 	// Override method if set in header
 	if method := req.Header.Get("X-HTTP-Method-Override"); method != "" && req.Method == "POST" {
@@ -141,7 +141,7 @@ func (router *Router) Route(req *http.Request) *RouteMatch {
 
 	// Special handling for explicit 404's.
 	if route.Action == "404" {
-		return notFound
+		return routeMatchNotFound
 	}
 
 	// If the action is variablized, replace into it with the captured args.
