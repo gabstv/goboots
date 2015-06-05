@@ -24,6 +24,8 @@ This is not fully ready for production.
 
 ## Benchmarks
 
+`go test -bench=. -benchmem  2>/dev/null`
+
 ####v 0.4.0 @ gabstv's iMac i7 3.4 Ghz (Mid 2011)
 ```
 BenchmarkGoboots_Simple	      100000	     13943 ns/op
