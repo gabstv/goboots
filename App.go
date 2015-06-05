@@ -44,13 +44,14 @@ type App struct {
 	didRunRoutines  bool
 	mainChan        chan error
 	loadedAll       bool
-	nActiveThreads  count32
+	Monitor         appMonitor
 	Logger          Logger
 }
 
 func NewApp() *App {
 	app := &App{}
 	app.Logger = DefaultLogger()
+	app.Monitor = newMonitor(app)
 	return app
 }
 
@@ -95,8 +96,8 @@ func (a *appHTTPS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	app.nActiveThreads.increment()
-	defer app.nActiveThreads.subtract()
+	app.Monitor.activeThreads.increment()
+	defer app.Monitor.activeThreads.subtract()
 	routed := app.enroute(w, r)
 	//if routes didn't find anything
 	if !routed {
@@ -117,10 +118,6 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			app.servePublicFolder(w, r)
 		}
 	}
-}
-
-func (app *App) CountActiveThreads() int {
-	return int(app.nActiveThreads.get())
 }
 
 func (app *App) Listen() error {
