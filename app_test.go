@@ -42,10 +42,12 @@ func (t *testController) TestWebsocket(in *In) *Out {
 func TestApp(t *testing.T) {
 	RegisterSessionStorageDriver("sessmemory", &testDBSession{})
 	app := NewApp()
-	app.Config.Name = "Test App"
-	app.Config.HostAddr = ":8001"
-	app.Config.GlobalPageTitle = "Test App - "
-	app.Config.OldRouteMethod = true
+	app.Config = &AppConfig{
+		Name:            "Test App",
+		HostAddr:        ":8001",
+		GlobalPageTitle: "Test App - ",
+		OldRouteMethod:  true,
+	}
 	app.InitSessionStorage("sessmemory")
 	r0 := OldRoute{}
 	r0.Path = "/"

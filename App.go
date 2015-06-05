@@ -27,7 +27,7 @@ import (
 type App struct {
 	// public
 	AppConfigPath string
-	Config        AppConfig
+	Config        *AppConfig
 	Routes        []OldRoute
 	Router        *Router
 	Filters       []Filter
@@ -304,9 +304,9 @@ func (app *App) LoadConfigFile() error {
 		}
 		bytes = bf1.Bytes()
 	} else if xt == ".yaml" {
-		return yaml.Unmarshal(bytes, &app.Config)
+		return yaml.Unmarshal(bytes, app.Config)
 	}
-	return json.Unmarshal(bytes, &app.Config)
+	return json.Unmarshal(bytes, app.Config)
 }
 
 // deprecated routes method
@@ -360,6 +360,18 @@ func (app *App) loadRoutesOld() error {
 }
 
 func (a *App) loadRoutesNew() error {
+	if a.Router == nil && a.Config == nil {
+		return errors.New("loadRoutesNew: cannot load routes because Congif is null")
+	}
+	if a.Config != nil {
+		if a.Router == nil && len(a.Config.RoutesConfigPath) < 1 {
+			return errors.New("loadRoutesNew: Config.RoutesConfigPath is not set")
+		}
+	}
+	if a.Router != nil {
+		a.Logger.Println("SKIPPING loadRoutesNew because the routes were added MANUALLY")
+		return nil
+	}
 	a.Router = NewRouter(a, a.Config.RoutesConfigPath)
 	err := a.Router.Refresh()
 	if err != nil {
@@ -378,7 +390,7 @@ func (app *App) loadConfig() error {
 	//
 	// LOAD AppConfig.json
 	//
-	if len(app.Config.Name) == 0 {
+	if app.Config == nil {
 		err = app.LoadConfigFile()
 		if err != nil {
 			return errors.New("loadConfig app.LoadConfigFile() " + err.Error())
@@ -439,6 +451,35 @@ func (a *App) AddTemplateFunc(key string, tfunc interface{}) {
 		a.templateFuncMap = make(template.FuncMap)
 	}
 	a.templateFuncMap[key] = tfunc
+}
+
+func (a *App) AddRouteLine(line string) error {
+	joinedPath := ""
+	if a.Router == nil {
+		a.Router = NewRouter(a, "memory")
+		a.Router.Routes = make([]*Route, 0)
+	}
+	//
+	line = strings.TrimSpace(line)
+	if len(line) == 0 || line[0] == '#' {
+		return nil
+	}
+	method, path, action, fixedArgs, found := parseRouteLine(line)
+	if !found {
+		return nil
+	}
+	// this will avoid accidental double forward slashes in a route.
+	// this also avoids pathtree freaking out and causing a runtime panic
+	// because of the double slashes
+	if strings.HasSuffix(joinedPath, "/") && strings.HasPrefix(path, "/") {
+		joinedPath = joinedPath[0 : len(joinedPath)-1]
+	}
+	path = strings.Join([]string{AppRoot, joinedPath, path}, "")
+
+	route := NewRoute(method, path, action, fixedArgs, "memory", len(a.Router.Routes), a)
+	a.Router.Routes = append(a.Router.Routes, route)
+	//
+	return a.Router.updateTree()
 }
 
 func (a *App) loadTemplates() error {
