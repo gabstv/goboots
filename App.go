@@ -4,6 +4,7 @@ import (
 	by "bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
@@ -124,7 +125,10 @@ func (app *App) CountActiveThreads() int {
 
 func (app *App) Listen() error {
 	app.mainChan = make(chan error)
-	app.loadAll()
+	e0 := app.loadAll()
+	if e0 != nil {
+		app.mainChan <- e0
+	}
 	go func() {
 		app.listen()
 	}()
@@ -250,9 +254,9 @@ func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
 	errorLayout.Execute(w, page)
 }
 
-func (a *App) loadAll() {
+func (a *App) loadAll() error {
 	if a.loadedAll {
-		return
+		return nil
 	}
 
 	// load routes if they were added statically
@@ -264,9 +268,16 @@ func (a *App) loadAll() {
 
 	a.entryHTTP = &appHTTP{a}
 	a.entryHTTPS = &appHTTPS{a}
-	a.loadConfig()
-	a.loadTemplates()
+	err := a.loadConfig()
+	if err != nil {
+		return errors.New("loadAll " + err.Error())
+	}
+	err = a.loadTemplates()
+	if err != nil {
+		return errors.New("loadAll " + err.Error())
+	}
 	a.loadedAll = true
+	return nil
 }
 
 func (app *App) LoadConfigFile() error {
@@ -308,7 +319,7 @@ func (app *App) LoadConfigFile() error {
 }
 
 // deprecated routes method
-func (app *App) loadRoutesOld() {
+func (app *App) loadRoutesOld() error {
 	var bytes []byte
 	var err error
 	if app.Routes == nil {
@@ -321,17 +332,23 @@ func (app *App) loadRoutesOld() {
 			rpath = strings.TrimSpace(rpath)
 			fdir := FormatPath(rpath)
 			bytes, err = ioutil.ReadFile(fdir)
-			__panic(err)
+			if err != nil {
+				return errors.New("loadRoutesOld ioutil.ReadFile " + fdir + " " + err.Error())
+			}
 			tempslice := make([]OldRoute, 0)
 			if xt := filepath.Ext(fdir); xt == ".dson" {
 				var bf0, bf1 by.Buffer
 				bf0.Write(bytes)
 				err = dson2json.Convert(&bf0, &bf1)
-				__panic(err)
+				if err != nil {
+					return errors.New("loadRoutesOld dson2json.Convert " + fdir + " " + err.Error())
+				}
 				bytes = bf1.Bytes()
 			}
 			err = json.Unmarshal(bytes, &tempslice)
-			__panic(err)
+			if err != nil {
+				return errors.New("loadRoutesOld json.Unmarshal " + fdir + " " + err.Error())
+			}
 			for _, v := range tempslice {
 				app.Logger.Println("Route `" + v.Path + "` loaded.")
 				app.Routes = append(app.Routes, v)
@@ -348,15 +365,19 @@ func (app *App) loadRoutesOld() {
 			app.Routes[i]._t = routeMethodIgnoreTrail
 		}
 	}
+	return nil
 }
 
-func (a *App) loadRoutesNew() {
+func (a *App) loadRoutesNew() error {
 	a.Router = NewRouter(a, a.Config.RoutesConfigPath)
 	err := a.Router.Refresh()
-	a.Logger.Println(a.Router.Routes, err)
+	if err != nil {
+		return errors.New("loadRoutesNew a.Router.Refresh() " + err.Error())
+	}
+	return nil
 }
 
-func (app *App) loadConfig() {
+func (app *App) loadConfig() error {
 	// setup Random
 	src := rand.NewSource(time.Now().Unix())
 	app.Random = rand.New(src)
@@ -368,7 +389,9 @@ func (app *App) loadConfig() {
 	//
 	if len(app.Config.Name) == 0 {
 		err = app.LoadConfigFile()
-		__panic(err)
+		if err != nil {
+			return errors.New("loadConfig app.LoadConfigFile() " + err.Error())
+		}
 	}
 	// set default views extension if none
 	if len(app.Config.ViewsExtensions) < 1 {
@@ -381,9 +404,12 @@ func (app *App) loadConfig() {
 	// LOAD Routes
 	//
 	if app.Config.OldRouteMethod {
-		app.loadRoutesOld()
+		err = app.loadRoutesOld()
 	} else {
-		app.loadRoutesNew()
+		err = app.loadRoutesNew()
+	}
+	if err != nil {
+		return errors.New("loadRoutes " + err.Error())
 	}
 	//
 	// LOAD Localization Files (i18n)
@@ -392,12 +418,10 @@ func (app *App) loadConfig() {
 		locPath := FormatPath(app.Config.LocalePath)
 		fi, _ := os.Stat(locPath)
 		if fi == nil {
-			log.Fatal("Could not load i18n files at path " + locPath + "\n")
-			return
+			return errors.New("could not load i18n files at path " + locPath)
 		}
 		if !fi.IsDir() {
-			log.Fatal("Path " + locPath + " is not a directory!\n")
-			return
+			return errors.New("path " + locPath + " is not a directory")
 		}
 		i18ngo.LoadPoAll(locPath)
 		app.Logger.Println("i18n loaded.")
@@ -407,6 +431,7 @@ func (app *App) loadConfig() {
 	//
 	app.ByteCaches = NewByteCacheCollection()
 	app.GenericCaches = NewGenericCacheCollection()
+	return nil
 }
 
 func (a *App) AddTemplateFuncMap(tfmap map[string]interface{}) {
@@ -425,14 +450,14 @@ func (a *App) AddTemplateFunc(key string, tfunc interface{}) {
 	a.templateFuncMap[key] = tfunc
 }
 
-func (a *App) loadTemplates() {
+func (a *App) loadTemplates() error {
 	if a.templateFuncMap == nil {
 		a.templateFuncMap = make(template.FuncMap)
 	}
 	a.Logger.Println("loading template files (" + strings.Join(a.Config.ViewsExtensions, ",") + ")")
 	if len(a.Config.ViewsFolderPath) == 0 {
 		a.Logger.Println("ViewsFolderPath is empty")
-		return
+		return nil
 	}
 	a.templateMap = make(map[string]*templateInfo, 0)
 	fdir := FormatPath(a.Config.ViewsFolderPath)
@@ -448,18 +473,24 @@ func (a *App) loadTemplates() {
 		}
 		if extensionIsValid {
 			bytes, err := ioutil.ReadFile(path)
-			__panic(err)
+			if err != nil {
+				return errors.New("loadTemplates ioutil.ReadFile " + path + " " + err.Error())
+			}
 			ldir, _ := filepath.Split(path)
 			bytes, err = a.parseTemplateIncludeDeps(ldir, bytes)
-			__panic(err)
+			if err != nil {
+				return errors.New("loadTemplates ioutil.ReadFile " + path + " a.parseTemplateIncludeDeps " + err.Error())
+			}
 			if len(a.Config.LocalePath) < 1 {
 				tplInfo := &templateInfo{
 					path:       path,
 					lastUpdate: time.Now(),
 				}
 				templ := template.New(path).Funcs(a.templateFuncMap)
-				templ, err0 := templ.Parse(string(bytes))
-				__panic(err0)
+				templ, err := templ.Parse(string(bytes))
+				if err != nil {
+					return errors.New("loadTemplates template.New " + path + " templ.Parse " + err.Error())
+				}
 				tplInfo.data = templ
 				a.templateMap[path] = tplInfo
 				bytesLoaded += len(bytes)
@@ -471,8 +502,10 @@ func (a *App) loadTemplates() {
 					}
 					locPName := path + "_" + lcv
 					templ := template.New(locPName)
-					templ, err0 := templ.Parse(LocalizeTemplate(string(bytes), lcv))
-					__panic(err0)
+					templ, err := templ.Parse(LocalizeTemplate(string(bytes), lcv))
+					if err != nil {
+						return errors.New("loadTemplates " + locPName + " templ.Parse LocalizeTemplate " + err.Error())
+					}
 					tplInfo.data = templ
 					a.templateMap[locPName] = tplInfo
 					bytesLoaded += len(bytes)
@@ -482,8 +515,11 @@ func (a *App) loadTemplates() {
 		return nil
 	}
 	err := filepath.Walk(fdir, vPath)
-	__panic(err)
+	if err != nil {
+		return errors.New("loadTemplates filepath.Walk " + fdir + " " + err.Error())
+	}
 	a.Logger.Printf("%d templates loaded (%d bytes)\n", len(a.templateMap), bytesLoaded)
+	return nil
 }
 
 func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) {

@@ -313,7 +313,6 @@ func (app *App) GetSession(w http.ResponseWriter, r *http.Request) *Session {
 		w.Write([]byte("The server encountered an error while processing your request [ERR_CONN_NEW_SESSION]."))
 		return nil
 	}
-	//__panic(err)
 	SetCookieAdv(w, "goboots_sessid", sid, "/", "", time.Now().AddDate(0, 1, 0), 0, false, true)
 	session.w = w
 	session.r = r
@@ -444,12 +443,6 @@ func IntMax(a, b int) int {
 		return a
 	}
 	return b
-}
-
-func __panic(err error) {
-	if err != nil {
-		log.Panicln(err)
-	}
 }
 
 func FormatPath(rawpath string) string {
