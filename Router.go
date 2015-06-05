@@ -39,8 +39,6 @@ import (
 	"log"
 )
 
-var AppRoot = "" //TODO: move/remove this
-
 type Route struct {
 	Method         string   // e.g. GET
 	Path           string   // e.g. /app/:id
@@ -225,7 +223,7 @@ func parseRoutes(routesPath, joinedPath, content string, validate bool, app *App
 		if strings.HasSuffix(joinedPath, "/") && strings.HasPrefix(path, "/") {
 			joinedPath = joinedPath[0 : len(joinedPath)-1]
 		}
-		path = strings.Join([]string{AppRoot, joinedPath, path}, "")
+		path = strings.Join([]string{joinedPath, path}, "")
 
 		route := NewRoute(method, path, action, fixedArgs, routesPath, n, app)
 		routes = append(routes, route)
