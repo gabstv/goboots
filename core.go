@@ -4,18 +4,17 @@ import (
 	"bytes"
 	"code.google.com/p/go-uuid/uuid"
 	"errors"
-	"fmt"
 	"github.com/gabstv/i18ngo"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"text/template"
 	"time"
-	"net"
-	"sync/atomic"
 )
 
 const (
@@ -25,9 +24,18 @@ const (
 )
 
 var (
-	sessionDbs   map[string]ISessionDBEngine
-	curSessionDb ISessionDBEngine
-	controllers  []IController
+	sessionDbs       map[string]ISessionDBEngine
+	curSessionDb     ISessionDBEngine
+	controllers      []IController
+	httpErrorStrings = map[int]string{
+		400: "Bad Request",
+		401: "Unauthorized",
+		403: "Forbidden",
+		404: "Not Found",
+		405: "Method Not Allowed",
+		406: "Not Acceptable",
+		501: "Internal Server Error",
+	}
 )
 
 type count32 int32
@@ -262,7 +270,7 @@ func (s *Session) GetExpires() time.Time {
 	return cookie.Expires
 }
 
-func GetSession(w http.ResponseWriter, r *http.Request) *Session {
+func (app *App) GetSession(w http.ResponseWriter, r *http.Request) *Session {
 	if w == nil || r == nil {
 		return nil
 	}
@@ -283,10 +291,10 @@ func GetSession(w http.ResponseWriter, r *http.Request) *Session {
 				msession.w = w
 				return msession
 			}
-			fmt.Printf("SESSION ERROR :( [%s] %s\n", sid, err.Error())
+			app.Logger.Printf("SESSION ERROR :( [%s] %s\n", sid, err.Error())
 			// not found, generate a new sid
 		} else {
-			fmt.Printf("COULD NOT VALIDATE :( [%s]\n", sid)
+			app.Logger.Printf("COULD NOT VALIDATE :( [%s]\n", sid)
 		}
 	}
 	// gen session

@@ -1,0 +1,12 @@
+  Name: "Goboots Basic Server Example"
+  Version: "1.0"
+  HostAddr: ":$PORT" # gets the port from the environment variable $PORT
+  HostAddrTLS: ":$PORT_TLS" # gets the port from the environment variable $PORT_TLS
+  TLSRedirect: false
+  Salt: "z|s}R^B@kAiF24:$e^57?pDzGsS(kg+H"
+  TLSCertificatePath: "config/cert.pem"
+  TLSKeyPath: "config/key.pem"
+  RoutesConfigPath: "config/Routes.cfg"
+  ViewsFolderPath: "view"
+  PublicFolderPath: "public"
+  GlobalPageTitle: "Basic Server Example : "

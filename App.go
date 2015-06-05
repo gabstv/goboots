@@ -190,20 +190,18 @@ func (a *App) GetViewTemplate(localpath string) *template.Template {
 	if len(a.Config.LocalePath) > 0 {
 		localpath = localpath + "_" + i18ngo.GetDefaultLanguageCode()
 	}
-	//pieces := strings.Split(localpath, "/")
-	//path := strings.Join(append([]string{a.basePath, a.AppConfigPath, "view"}, pieces...), string(os.PathSeparator))
-	//return a.templateMap[path].data
-	return a.templateMap[a.Config.ViewsFolderPath+"/"+localpath].data
+	if tpl, ok := a.templateMap[a.Config.ViewsFolderPath+"/"+localpath]; ok {
+		return tpl.data
+	}
+	return nil
 }
 
 func (a *App) GetLocalizedViewTemplate(localpath string, w http.ResponseWriter, r *http.Request) *template.Template {
 	localpath = localpath + "_" + GetUserLang(w, r)
-	//pieces := strings.Split(localpath, "/")
-	//path := strings.Join(append([]string{a.basePath, a.AppConfigPath, "view"}, pieces...), string(os.PathSeparator))
-	//return a.templateMap[path].data
-	//a.Logger.Println("GET-TEMPLATE" + localpath)
-	//TODO: fix get/set templates!
-	return a.templateMap[a.Config.ViewsFolderPath+"/"+localpath].data
+	if tpl, ok := a.templateMap[a.Config.ViewsFolderPath+"/"+localpath]; ok {
+		return tpl.data
+	}
+	return nil
 }
 
 func (a *App) GetLayout(name string) *template.Template {
@@ -218,6 +216,10 @@ func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
 	//TODO: i18n HTTP Errors
 	w.WriteHeader(err)
 	errorLayout := a.GetLayout("error")
+	if errorLayout == nil {
+		http.Error(w, httpErrorStrings[err], err)
+		return
+	}
 	var erDesc string
 	switch err {
 	case 400:
@@ -596,7 +598,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 	}
 	if app.Router != nil {
 		match := app.Router.Route(r)
-		app.Logger.Println("new router match!", match)
+		//app.Logger.Println("new router match!", match)
 		if match != nil {
 			if match.Action == "404" {
 				//TODO: clean flash
