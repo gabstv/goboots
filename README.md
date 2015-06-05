@@ -1,6 +1,6 @@
 goboots
 =======
-![version 0.4.0](https://img.shields.io/badge/v-0.4.0-blue.svg)  
+![version 0.4.1](https://img.shields.io/badge/v-0.4.1-blue.svg)  
   
 
 ![goboots](https://s3.amazonaws.com/gabstv-github/goboots.png)
@@ -20,7 +20,6 @@ This is not fully ready for production.
 ## Etc:
 
 [now using Robfig's revel routing method](http://revel.github.io/manual/routing.html)  
-[check yaml config for keys](http://godoc.org/gopkg.in/yaml.v2)
 
 ## Benchmarks
 
