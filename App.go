@@ -252,6 +252,10 @@ func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
 	errorLayout.Execute(w, page)
 }
 
+func (a *App) BenchLoadAll() error {
+	return a.loadAll()
+}
+
 func (a *App) loadAll() error {
 	if a.loadedAll {
 		return nil

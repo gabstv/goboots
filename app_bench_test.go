@@ -90,6 +90,7 @@ func gobootsRouterFor(namespaces []string, resources []string) http.Handler {
 			app.AddRouteLine("DELETE /" + ns + "/" + res + "/:id BenchmarkController.Bench")
 		}
 	}
+	app.BenchLoadAll()
 	return app
 }
 
@@ -111,8 +112,7 @@ func BenchmarkGoboots_Simple(b *testing.B) {
 	}
 	app.RegisterController(&BenchmarkController{})
 	app.AddRouteLine("GET / BenchmarkController.Bench")
-	app.loadAll()
-	//app.runRoutines()
+	app.BenchLoadAll()
 
 	w, r := testRequest("GET", "/")
 
@@ -158,8 +158,7 @@ func BenchmarkGoboots_Middleware(b *testing.B) {
 
 	app.RegisterController(&BenchmarkController{})
 	app.AddRouteLine("GET / BenchmarkController.Bench")
-	app.loadAll()
-	//app.runRoutines()
+	app.BenchLoadAll()
 
 	w, r := testRequest("GET", "/")
 
