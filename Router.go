@@ -26,17 +26,15 @@ package goboots
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
+	"github.com/robfig/pathtree"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
-
-	"errors"
-	"github.com/robfig/pathtree"
-	"log"
 )
 
 type Route struct {
@@ -75,7 +73,7 @@ func NewRoute(method, path, action, fixedArgs, routesPath string, line int, app 
 	csv.TrimLeadingSpace = true
 	fargs, err := csv.Read()
 	if err != nil && err != io.EOF {
-		log.Printf("Invalid fixed parameters (%v): for string '%v'\n", err.Error(), fixedArgs)
+		app.Logger.Printf("Invalid fixed parameters (%v): for string '%v'\n", err.Error(), fixedArgs)
 	}
 
 	r = &Route{
@@ -91,7 +89,7 @@ func NewRoute(method, path, action, fixedArgs, routesPath string, line int, app 
 
 	// URL pattern
 	if !strings.HasPrefix(r.Path, "/") {
-		log.Println("Absolute URL required.")
+		app.Logger.Println("Absolute URL required.")
 		return
 	}
 
@@ -316,7 +314,7 @@ func (a *ActionDefinition) String() string {
 func (router *Router) Reverse(action string, argValues map[string]string) *ActionDefinition {
 	actionSplit := strings.Split(action, ".")
 	if len(actionSplit) != 2 {
-		log.Println("revel/router: reverse router got invalid action ", action)
+		router.app.Logger.Println("router: reverse router got invalid action ", action)
 		return nil
 	}
 	controllerName, methodName := actionSplit[0], actionSplit[1]
@@ -354,7 +352,7 @@ func (router *Router) Reverse(action string, argValues map[string]string) *Actio
 			val, ok := argValues[el[1:]]
 			if !ok {
 				val = "<nil>"
-				log.Println("revel/router: reverse route missing route arg ", el[1:])
+				router.app.Logger.Println("router: reverse route missing route arg ", el[1:])
 			}
 			pathElements[i] = val
 			delete(argValues, el[1:])
@@ -388,6 +386,6 @@ func (router *Router) Reverse(action string, argValues map[string]string) *Actio
 			Host:   "TODO",
 		}
 	}
-	log.Println("Failed to find reverse route:", action, argValues)
+	router.app.Logger.Println("Failed to find reverse route:", action, argValues)
 	return nil
 }
