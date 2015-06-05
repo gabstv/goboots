@@ -209,6 +209,7 @@ func (in *In) outputTpl(tplPath, customLayout string) *Out {
 	ln := in.Controller.GetLayoutName()
 	if len(ln) == 0 && len(customLayout) == 0 {
 		// no layout defined!
+		//TODO: fix this because the browser isn't understanding the request
 		o.kind = outBytes
 		var buff bytes.Buffer
 		binary.Write(&buff, binary.BigEndian, o.contentObj)

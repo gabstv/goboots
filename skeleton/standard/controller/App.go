@@ -11,7 +11,8 @@ type App struct {
 }
 
 func (c *App) Init() {
-
+	c.Controller.Init()
+	// add initialization code here
 }
 
 func (c *App) PreFilter(in *goboots.In) *goboots.Out {

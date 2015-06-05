@@ -122,6 +122,7 @@ func copyFiles() {
 	mustCopyDir(appPath, skelln, map[string]interface{}{
 		"AppName": appName,
 		"Salt":    newkey32(),
+		"AppPath": importPath,
 	})
 	// Dotfiles are skipped by mustCopyDir, so we have to explicitly copy the .gitignore.
 	gitignore := ".gitignore"

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 )
@@ -46,6 +47,8 @@ type App struct {
 	loadedAll       bool
 	Monitor         appMonitor
 	Logger          Logger
+	//
+	globalLoadOnce sync.Once
 }
 
 func NewApp() *App {
@@ -121,7 +124,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) Listen() error {
-	app.mainChan = make(chan error)
+	app.mainChan = make(chan error, 10)
 	e0 := app.loadAll()
 	if e0 != nil {
 		app.mainChan <- e0
@@ -152,7 +155,7 @@ func (app *App) listen() {
 
 func (app *App) listenTLS() {
 	app.loadAll()
-	if len(app.Config.HostAddrTLS) < 1 {
+	if len(app.Config.HostAddrTLS) < 1 || (len(app.Config.TLSCertificatePath) < 1 && len(app.Config.TLSKeyPath) < 1) {
 		//TODO: error is TLS needs to be enforced (add config option)
 		return
 	}
@@ -272,13 +275,6 @@ func (a *App) loadAll() error {
 		return errors.New("loadAll " + err.Error())
 	}
 
-	// load globally registered controllers
-	if staticControllers != nil {
-		for _, v := range staticControllers {
-			a.RegisterController(v)
-		}
-	}
-
 	a.loadedAll = true
 	return nil
 }
@@ -306,6 +302,9 @@ func (app *App) LoadConfigFile() error {
 	bytes, err := ioutil.ReadFile(dir)
 	if err != nil {
 		return err
+	}
+	if app.Config == nil {
+		app.Config = &AppConfig{}
 	}
 	if xt := filepath.Ext(app.AppConfigPath); xt == ".dson" {
 		var bf0, bf1 by.Buffer
@@ -415,6 +414,15 @@ func (app *App) loadConfig() error {
 
 	// parse Config
 	app.Config.ParseEnv()
+
+	app.globalLoadOnce.Do(func() {
+		// load globally registered controllers
+		if staticControllers != nil {
+			for _, v := range staticControllers {
+				app.RegisterController(v)
+			}
+		}
+	})
 	//
 	// LOAD Routes
 	//

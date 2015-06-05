@@ -19,11 +19,12 @@ func (c *Home) PreFilter(in *goboots.In) *goboots.Out {
 	if r := c.App.PreFilter(in); r == nil || !r.IsContinue() {
 		return r
 	}
+	return in.Continue()
 }
 
 func (c *Home) Index(in *goboots.In) *goboots.Out {
 	in.Content.Set("greetings", "Hello, World!")
-	return in.OutputTpl("home/index.html")
+	return in.OutputTpl("home/index.tpl")
 }
 
 func (c *Home) Count(in *goboots.In) *goboots.Out {

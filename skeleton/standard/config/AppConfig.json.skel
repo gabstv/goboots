@@ -8,7 +8,7 @@
 	"LocalePath" : "",
 	"DefaultLanguage": "",
 	"Data" : {},
-	"RoutesConfigPath": "config/Routes.cfg; config/Routes2.cfg",
+	"RoutesConfigPath": "config/Routes.cfg",
 	"ViewsFolderPath":  "view",
 	"PublicFolderPath": "public",
 
