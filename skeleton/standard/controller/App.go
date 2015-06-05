@@ -9,3 +9,11 @@ import (
 type App struct {
 	goboots.Controller
 }
+
+func (c *App) Init() {
+
+}
+
+func (c *App) PreFilter(in *goboots.In) *goboots.Out {
+	return in.Continue()
+}

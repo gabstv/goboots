@@ -1,7 +1,0 @@
-[
-	{
-		"Path" : "/",
-		"Controller" : "HomeController",
-		"Method": "Index"
-	}
-]

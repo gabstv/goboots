@@ -1,9 +1,10 @@
 package main
 
 import (
-	_ "./controller"
 	"github.com/gabstv/goboots"
 	"log"
+	_ "{{.AppPath}}/controller"
+	_ "github.com/gabstv/goboots/session-db-drivers/sessmemory"
 )
 
 func main() {
@@ -13,6 +14,12 @@ func main() {
 	if err != nil {
 		log.Fatalln("Configuration Error", err)
 	}
+
+	// Init a session storage of your choice
+	// https://github.com/gabstv/goboots/tree/master/session-db-drivers
+	app.InitSessionStorage("sessmemory")
+
+
 	err = app.Listen()
 	if err != nil {
 		log.Fatalln("app.Listen Error", err)

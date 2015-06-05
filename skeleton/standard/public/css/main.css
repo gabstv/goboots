@@ -1,0 +1,12 @@
+@charset "UTF-8";
+html, body {
+	margin: 0;
+	background: #000;
+	color: #fff;
+}
+#wrapper {
+	margin-top: 20px;
+	width: 600px;
+	margin-left: auto;
+	margin-right: auto;
+}
