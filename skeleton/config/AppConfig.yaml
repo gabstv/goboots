@@ -1,0 +1,24 @@
+Name: "{{.Name}}"
+Version: "0.1"
+HostAddr: ":$PORT"
+HostAddrTLS: ":$PORT_TLS"
+TLSRedirect: false
+Salt: "{{.Salt}}"
+LocalePath: ""
+DefaultLanguage: ""
+Data: {}
+RoutesConfigPath: "config/Routes.conf; config/Routes2.conf"
+ViewsFolderPath: "view"
+PublicFolderPath: "public"
+Databases: 
+  session: 
+    Connection: "localhost"
+    Database: "test"
+    User: ""
+    Password: ""
+  data: 
+    Connection: "localhost"
+    Database: "test"
+    User: ""
+    Password: ""
+SessionDb: "session"
