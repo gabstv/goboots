@@ -629,6 +629,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 		w,
 		nil,
 		urlbits,
+		Params{},
 		nil,
 		&InContent{},
 		&InContent{},
@@ -685,6 +686,9 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				app.DoHTTPError(w, r, 501)
 				return true
 			}
+			if match.Params == nil {
+				match.Params = make(Params)
+			}
 			//TODO: handle TLS redirect (on revel fork first)
 			var inObj *In
 			ul := GetUserLang(w, r)
@@ -693,6 +697,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				w,
 				nil,
 				urlbits,
+				match.Params,
 				nil,
 				&InContent{},
 				&InContent{},

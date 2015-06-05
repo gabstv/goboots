@@ -144,3 +144,37 @@ type ISessionDBEngine interface {
 	Cleanup(minTime time.Time)
 	Close()
 }
+
+var devNullSess = &Session{SID: "nil"}
+
+type SessionDevNull struct {
+	app *App
+}
+
+func (s *SessionDevNull) SetApp(app *App) {
+	s.app = app
+}
+
+func (s *SessionDevNull) GetSession(sid string) (*Session, error) {
+	return devNullSess, nil
+}
+
+func (s *SessionDevNull) PutSession(s2 *Session) error {
+	return nil
+}
+
+func (s *SessionDevNull) NewSession(s2 *Session) error {
+	return nil
+}
+
+func (s *SessionDevNull) RemoveSession(s2 *Session) error {
+	return nil
+}
+
+func (s *SessionDevNull) Cleanup(minTime time.Time) {
+
+}
+
+func (s *SessionDevNull) Close() {
+
+}

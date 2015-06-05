@@ -33,6 +33,7 @@ type In struct {
 	W              http.ResponseWriter
 	Wsock          *websocket.Conn
 	URLParts       []string
+	Params         Params // set in the new routing method
 	session        *Session
 	Content        *InContent
 	LayoutContent  *InContent
@@ -53,6 +54,7 @@ func (in *In) New() *In {
 	in2.R = in.R
 	in2.W = in.W
 	in2.URLParts = in.URLParts
+	in2.Params = in.Params
 	in2.session = in.session
 	in2.Content = &InContent{}
 	in2.LayoutContent = &InContent{}

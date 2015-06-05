@@ -60,7 +60,7 @@ type RouteMatch struct {
 	ControllerName string // e.g. Application
 	MethodName     string // e.g. ShowApp
 	FixedParams    []string
-	Params         map[string][]string // e.g. {id: 123}
+	Params         Params // e.g. {id: 123}
 }
 
 type arg struct {
@@ -135,11 +135,11 @@ func (router *Router) Route(req *http.Request) *RouteMatch {
 	route := leaf.Value.(*Route)
 
 	// Create a map of the route parameters.
-	var params url.Values
+	var params Params
 	if len(expansions) > 0 {
-		params = make(url.Values)
+		params = make(Params)
 		for i, v := range expansions {
-			params[leaf.Wildcards[i]] = []string{v}
+			params[leaf.Wildcards[i]] = v
 		}
 	}
 
@@ -151,10 +151,10 @@ func (router *Router) Route(req *http.Request) *RouteMatch {
 	// If the action is variablized, replace into it with the captured args.
 	controllerName, methodName := route.ControllerName, route.MethodName
 	if controllerName[0] == ':' {
-		controllerName = params[controllerName[1:]][0]
+		controllerName = params[controllerName[1:]]
 	}
 	if methodName[0] == ':' {
-		methodName = params[methodName[1:]][0]
+		methodName = params[methodName[1:]]
 	}
 
 	return &RouteMatch{

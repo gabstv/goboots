@@ -36,6 +36,8 @@ var (
 	}
 )
 
+type Params map[string]string
+
 func hostonly(hostport string) string {
 	h, _, _ := net.SplitHostPort(hostport)
 	return h
@@ -71,7 +73,7 @@ func initAnySessionStorage() {
 		return
 	}
 	if sessionDbs == nil {
-		//TODO: should panic
+		curSessionDb = &SessionDevNull{}
 		return
 	}
 	for _, v := range sessionDbs {
