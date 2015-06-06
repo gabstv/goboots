@@ -61,6 +61,13 @@ func getTLSRedirectURL(hostaddrtls string, uri *url.URL) (string, error) {
 		uri.Scheme = "wss"
 	} else if uri.Scheme == "http" {
 		uri.Scheme = "https"
+	} else {
+		// localhost may leave this empty
+		uri.Scheme = "https"
+	}
+	if uri.Host == "" {
+		// it's localhost
+		uri.Host = "localhost"
 	}
 	if p != "443" {
 		uri.Host = uri.Host + ":" + p
