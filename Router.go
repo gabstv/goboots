@@ -25,6 +25,7 @@ package goboots
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import (
+	"bytes"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -267,6 +268,223 @@ func validateRoute(route *Route) error {
 	return nil
 }
 
+func routeLineReader(line string) (method, path, action, fixedArgs string, tls, found bool, errormessage string) {
+	stage := 0
+	begin := false
+	quoted := false
+	bbackslashes := 0
+	buf := new(bytes.Buffer)
+	for _, r := range line {
+		switch stage {
+		case 0:
+			// METHOD
+			if !begin {
+				if r == ' ' || r == '\t' {
+					continue
+				} else {
+					begin = true
+					buf.WriteRune(r)
+				}
+			} else {
+				if r == ' ' || r == '\t' {
+					method = buf.String()
+					switch method {
+					case "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD", "WS", "*":
+						stage = 1
+						begin = false
+						buf.Reset()
+					default:
+						errormessage = fmt.Sprintf("Method %s is not valid!", method)
+						found = false
+						return
+					}
+				} else {
+					buf.WriteRune(r)
+				}
+			}
+		case 1:
+			// PATH
+			if !begin {
+				if r == ' ' || r == '\t' {
+					continue
+				} else {
+					if r != '/' {
+						// Paths should always brgin with a trailing slash
+						//TODO: error notify
+						errormessage = fmt.Sprintf("Paths should always brgin with a trailing slash")
+						found = false
+						return
+					}
+					begin = true
+					buf.WriteRune(r)
+				}
+			} else {
+				if r == ' ' || r == '\t' {
+					path = buf.String()
+					stage = 2
+					buf.Reset()
+					begin = false
+				} else {
+					buf.WriteRune(r)
+				}
+			}
+		case 2:
+			// Controller.Action
+			if !begin {
+				if r == ' ' || r == '\t' {
+					continue
+				} else {
+					begin = true
+					buf.WriteRune(r)
+				}
+			} else {
+				if r == ' ' || r == '\t' || r == '(' {
+					if r == '(' {
+						// jump to fixedArgs
+						stage = 3
+					} else {
+						stage = 4
+						// jump to TLS checker
+					}
+					action = buf.String()
+					buf.Reset()
+					begin = false
+				} else {
+					buf.WriteRune(r)
+				}
+			}
+		case 3:
+			// fixedArgs (this is an optional parameter)
+			if !begin {
+				if r == '#' {
+					// it's a comment without closing the parenthesis! (wtf)
+					found = false
+					return
+				}
+				if r == ' ' || r == '\t' {
+					continue
+				} else {
+					begin = true
+					buf.WriteRune(r)
+					if r == '"' {
+						quoted = true
+					}
+				}
+			} else {
+				if quoted {
+					if r == '\\' {
+						bbackslashes++
+					}
+					if r == '"' {
+						if bbackslashes%2 == 0 {
+							quoted = false
+							bbackslashes = 0
+						}
+					}
+					if r != '\\' {
+						bbackslashes = 0
+					}
+					buf.WriteRune(r)
+				} else {
+					if r == ')' {
+						begin = false
+						quoted = false
+						bbackslashes = 0
+						fixedArgs = buf.String()
+						buf.Reset()
+						found = true
+						stage = 4 // go to TLS check
+						continue
+					}
+					if r != ' ' && r != '\t' && r != ',' && r != '"' {
+						// bad character between records
+						errormessage = fmt.Sprintf("bad character (%v) between fixedArgs", string(r))
+						found = false
+						return
+					}
+					if r != ' ' && r != '\t' {
+						buf.WriteRune(r)
+					}
+					if r == '"' {
+						quoted = true
+					}
+				}
+			}
+		case 4:
+			// mandatory TLS check (this is an optional parameter)
+			if !begin {
+				if r == '#' {
+					// it's a comment; end this early
+					found = true
+					return
+				}
+				if r == ' ' || r == '\t' {
+					continue
+				} else {
+					begin = true
+					buf.WriteRune(r)
+				}
+			} else {
+				if r == '#' {
+					// since we began the step, this transforms the route
+					// into an invalid one
+					errormessage = "found a comment while parsing TLS check"
+					found = false
+					return
+				} else if r == ' ' || r == '\t' {
+					bs := buf.String()
+					if bs == "TLS" {
+						tls = true
+						found = true
+						return
+					} else {
+						// at this moment, there is no other valid
+						// parameter besides TLS
+						errormessage = "TLS parameter `" + bs + "` invalid"
+						found = false
+						return
+					}
+				} else {
+					buf.WriteRune(r)
+				}
+			}
+		}
+	}
+	if stage < 2 {
+		// EOL before reaching mandatory stage 2
+		errormessage = fmt.Sprintf("EOL before reaching action parameter; method: '%s' path: '%s' stage: %v", method, path, stage)
+		found = false
+		return
+	}
+	if stage == 2 {
+		// EOL while still in stage 2
+		action = buf.String()
+		buf.Reset()
+		found = true
+		return
+	}
+	if stage == 3 {
+		// EOL while still in stage 3
+		// this shouldn't happen since the parenthesis should be closed
+		buf.Reset()
+		found = false
+		return
+	}
+	if stage == 4 {
+		if !begin {
+			found = true
+			return
+		}
+		if buf.String() == "TLS" {
+			buf.Reset()
+			tls = true
+			found = true
+			return
+		}
+	}
+	return
+}
+
 // routeError adds context to a simple error message.
 func routeError(err error, routesPath, content string, n int) error {
 	return errors.New("Route validation error; " + err.Error() + "; " + routesPath + "; line " + fmt.Sprintf("%v", n+1))
@@ -278,10 +496,13 @@ func routeError(err error, routesPath, content string, n int) error {
 // 5: action
 // 6: fixedargs
 var routePattern *regexp.Regexp = regexp.MustCompile(
-	"(?i)^(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|WS|\\*)" +
-		"[(]?([^)]*)(\\))?[ \t]+" +
-		"(.*/[^ \t]*)[ \t]+([^ \t(]+)" +
-		`\(?([^)]*)\)?[ \t]*$`)
+	"(?i)^" +
+		`(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|WS|\*)` + // capture group 1
+		`[(]?([^)]*)(\))?[ \t]+` + // unused capturing groups 2 and 3
+		`(.*\/[^ \t]*)` + // capturing group 4 (path)
+		`[ \t]+([^ \t(]+)` + // capturing group 5 (Controller.Action)
+		`\(?([^)]*)?\)?` + // capturing group 6 (FixedParams)
+		`\s*(TLS)?\s*.*$`) // capturing group 7 (TLS only)
 
 func parseRouteLine(line string) (method, path, action, fixedArgs string, found bool) {
 	var matches []string = routePattern.FindStringSubmatch(line)
