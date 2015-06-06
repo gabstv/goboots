@@ -26,7 +26,7 @@ const header = `
 ##            '_-~_.-'              ##
 ##             \-~                  ##
 ##          g o b o o t s           ##
-## http://gabstv.github.com/goboots ##
+## http://github.com/gabstv/goboots ##
 ##                                  ##
 ######################################
 `

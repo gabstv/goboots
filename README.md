@@ -23,6 +23,7 @@ run `goboots new path/to/myprojectname` (e.g. `goboots new github.com/gabstv/myw
 - Change Websocket implementation to [Gorilla](https://github.com/gorilla/websocket)
 - Setup documentation
 - Add example projects
+- Implement idiomatic context like [golang.org/x/net/context](https://godoc.org/golang.org/x/net/context)
 
 ## Deprecation:
 - The old routing method will be removed on version 0.5
