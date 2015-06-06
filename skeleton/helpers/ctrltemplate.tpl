@@ -21,6 +21,8 @@ func (c *{{.Name}}) PreFilter(in *goboots.In) *goboots.Out {
 	if r := c.App.PreFilter(in); r == nil || !r.IsContinue() {
 		return r
 	}
+	// Add own logic below
+	return in.Continue()
 }
 
 // {{.Name}} methods

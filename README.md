@@ -1,6 +1,6 @@
 goboots
 =======
-![version 0.4.2](https://img.shields.io/badge/v-0.4.2-blue.svg)  
+![version 0.4.3](https://img.shields.io/badge/v-0.4.3-blue.svg)  
   
 
 ![goboots](https://s3.amazonaws.com/gabstv-github/goboots.png)
@@ -8,14 +8,24 @@ goboots
 A Web Framework written in Google Go.  
 This is not fully ready for production.
 
+## Installation:
+run `go get -u github.com/gabstv/goboots/goboots`
+
+## Project Setup
+run `goboots new path/to/myprojectname` (e.g. `goboots new github.com/gabstv/mywebsite`)
+
+## Scaffolding:
+- Create a new controller:
+  - Be at your project's base folder
+  - Run `goboots scaff c MyControllerName`
+
 ## TODO:
 - Change Websocket implementation to [Gorilla](https://github.com/gorilla/websocket)
 - Setup documentation
-- Setup starter project
 - Add example projects
 
 ## Deprecation:
--- The old routing method will be removed on version 0.5
+- The old routing method will be removed on version 0.5
 
 ## Etc:
 

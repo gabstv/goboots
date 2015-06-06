@@ -57,6 +57,7 @@ func newApp(args []string) {
 	initSkelPath(p)
 	//
 	copyFiles()
+	fmt.Println("App " + appName + " created.")
 }
 
 func initSysPaths() {

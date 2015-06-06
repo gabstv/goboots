@@ -40,7 +40,7 @@ Commands:
 Use "goboots help [command]" for more information.
 `
 
-var commands = []*Command{cmdNew}
+var commands = []*Command{cmdNew, cmdScaff}
 
 type Command struct {
 	Run                    func(args []string)
