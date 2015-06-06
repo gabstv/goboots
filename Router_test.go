@@ -1,6 +1,7 @@
 package goboots
 
 import (
+	"regexp"
 	"testing"
 )
 
@@ -73,7 +74,7 @@ func TestRouteLineReader(t *testing.T) {
 			"", "", "", "", ""},
 	}
 	for n, v := range paths {
-		method, path, action, fixedArgs, tls, found, errormessage := routeLineReader(v[0])
+		method, path, action, fixedArgs, tls, found, errormessage, _ := routeParseLine(v[0])
 		if found && v[1] != "true" {
 			t.Fatalf("Route \n%v\n  Should be invalid!\n", v[0])
 		} else if !found && v[1] == "true" {
@@ -98,6 +99,45 @@ func TestRouteLineReader(t *testing.T) {
 			if tls && v[6] == "" {
 				t.Fatalf("TLS must be false on route %v\n", n)
 			}
+		}
+	}
+}
+
+func BenchmarkLineReaderOld(b *testing.B) {
+	var routePattern *regexp.Regexp = regexp.MustCompile(
+		"(?i)^(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|WS|\\*)" +
+			"[(]?([^)]*)(\\))?[ \t]+" +
+			"(.*/[^ \t]*)[ \t]+([^ \t(]+)" +
+			`\(?([^)]*)\)?[ \t]*$`)
+	paths := []string{
+		"GET  /login       App.Login         # A simple path",
+		`POST /action/:id  Home.Action("one","two","three") # Action`,
+		`WS /ws/sync       WSS.Sync # Comment`,
+	}
+	pn := 0
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		routePattern.FindStringSubmatch(paths[pn])
+		pn++
+		if pn >= len(paths) {
+			pn = 0
+		}
+	}
+}
+
+func BenchmarkLineReaderNew(b *testing.B) {
+	paths := []string{
+		"GET  /login       App.Login         # A simple path",
+		`POST /action/:id  Home.Action("one","two","three") # Action`,
+		`WS /ws/sync       WSS.Sync # Comment`,
+	}
+	pn := 0
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		routeParseLine(paths[pn])
+		pn++
+		if pn >= len(paths) {
+			pn = 0
 		}
 	}
 }

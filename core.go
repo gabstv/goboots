@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -42,6 +43,29 @@ type Params map[string]string
 func hostonly(hostport string) string {
 	h, _, _ := net.SplitHostPort(hostport)
 	return h
+}
+
+func trimhost(hostport string) string {
+	return strings.Split(hostport, ":")[0]
+}
+
+func getTLSRedirectURL(hostaddrtls string, uri *url.URL) (string, error) {
+	if uri == nil {
+		return "", errors.New("url is null")
+	}
+	_, p, err := net.SplitHostPort(hostaddrtls)
+	if err != nil {
+		return "", err
+	}
+	if uri.Scheme == "ws" {
+		uri.Scheme = "wss"
+	} else if uri.Scheme == "http" {
+		uri.Scheme = "https"
+	}
+	if p != "443" {
+		uri.Host = uri.Host + ":" + p
+	}
+	return uri.String(), nil
 }
 
 func RegisterSessionStorageDriver(name string, engine ISessionDBEngine) {

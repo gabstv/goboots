@@ -46,6 +46,7 @@ type Route struct {
 	MethodName     string   // e.g. "ShowApp", ""
 	FixedParams    []string // e.g. "arg1","arg2","arg3" (CSV formatting)
 	TreePath       string   // e.g. "/GET/app/:id"
+	TLSOnly        bool
 
 	routesPath string // e.g. /Users/robfig/gocode/src/myapp/conf/routes
 	line       int    // e.g. 3
@@ -58,6 +59,7 @@ type RouteMatch struct {
 	MethodName     string // e.g. ShowApp
 	FixedParams    []string
 	Params         Params // e.g. {id: 123}
+	TLSOnly        bool
 }
 
 var routeMatchNotFound = &RouteMatch{Action: "404"}
@@ -69,7 +71,7 @@ type arg struct {
 }
 
 // Prepares the route to be used in matching.
-func NewRoute(method, path, action, fixedArgs, routesPath string, line int, app *App) (r *Route) {
+func NewRoute(method, path, action, fixedArgs, routesPath string, line int, tlsonly bool, app *App) (r *Route) {
 	// Handle fixed arguments
 	argsReader := strings.NewReader(fixedArgs)
 	csv := csv.NewReader(argsReader)
@@ -85,6 +87,7 @@ func NewRoute(method, path, action, fixedArgs, routesPath string, line int, app 
 		Action:      action,
 		FixedParams: fargs,
 		TreePath:    treePath(strings.ToUpper(method), path),
+		TLSOnly:     tlsonly,
 		routesPath:  routesPath,
 		line:        line,
 		app:         app,
@@ -159,6 +162,7 @@ func (router *Router) Route(req *http.Request) *RouteMatch {
 		MethodName:     methodName,
 		Params:         params,
 		FixedParams:    route.FixedParams,
+		TLSOnly:        route.TLSOnly,
 	}
 }
 
@@ -211,8 +215,9 @@ func parseRoutes(routesPath, joinedPath, content string, validate bool, app *App
 		}
 
 		// A single route
-		method, path, action, fixedArgs, found := parseRouteLine(line)
+		method, path, action, fixedArgs, tls, found, errmsg, errbyte := routeParseLine(line)
 		if !found {
+			app.Logger.Printf("ROUTER ERROR on line %d:\n%s <<[%d] %s\n", n, line[:errbyte], errbyte, errmsg)
 			continue
 		}
 
@@ -224,7 +229,7 @@ func parseRoutes(routesPath, joinedPath, content string, validate bool, app *App
 		}
 		path = strings.Join([]string{joinedPath, path}, "")
 
-		route := NewRoute(method, path, action, fixedArgs, routesPath, n, app)
+		route := NewRoute(method, path, action, fixedArgs, routesPath, n, tls, app)
 		routes = append(routes, route)
 
 		if validate {
@@ -268,13 +273,14 @@ func validateRoute(route *Route) error {
 	return nil
 }
 
-func routeLineReader(line string) (method, path, action, fixedArgs string, tls, found bool, errormessage string) {
+func routeParseLine(line string) (method, path, action, fixedArgs string, tls, found bool, errormessage string, errorbyte int) {
 	stage := 0
 	begin := false
 	quoted := false
 	bbackslashes := 0
 	buf := new(bytes.Buffer)
-	for _, r := range line {
+	for i, r := range line {
+		errorbyte = i
 		switch stage {
 		case 0:
 			// METHOD
@@ -488,30 +494,6 @@ func routeLineReader(line string) (method, path, action, fixedArgs string, tls, 
 // routeError adds context to a simple error message.
 func routeError(err error, routesPath, content string, n int) error {
 	return errors.New("Route validation error; " + err.Error() + "; " + routesPath + "; line " + fmt.Sprintf("%v", n+1))
-}
-
-// Groups:
-// 1: method
-// 4: path
-// 5: action
-// 6: fixedargs
-var routePattern *regexp.Regexp = regexp.MustCompile(
-	"(?i)^" +
-		`(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|WS|\*)` + // capture group 1
-		`[(]?([^)]*)(\))?[ \t]+` + // unused capturing groups 2 and 3
-		`(.*\/[^ \t]*)` + // capturing group 4 (path)
-		`[ \t]+([^ \t(]+)` + // capturing group 5 (Controller.Action)
-		`\(?([^)]*)?\)?` + // capturing group 6 (FixedParams)
-		`\s*(TLS)?\s*.*$`) // capturing group 7 (TLS only)
-
-func parseRouteLine(line string) (method, path, action, fixedArgs string, found bool) {
-	var matches []string = routePattern.FindStringSubmatch(line)
-	if matches == nil {
-		return
-	}
-	method, path, action, fixedArgs = matches[1], matches[4], matches[5], matches[6]
-	found = true
-	return
 }
 
 func NewRouter(app *App, routesPath string) *Router {

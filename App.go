@@ -484,7 +484,7 @@ func (a *App) AddRouteLine(line string) error {
 	if len(line) == 0 || line[0] == '#' {
 		return nil
 	}
-	method, path, action, fixedArgs, found := parseRouteLine(line)
+	method, path, action, fixedArgs, tls, found, _, _ := routeParseLine(line)
 	if !found {
 		return nil
 	}
@@ -496,7 +496,7 @@ func (a *App) AddRouteLine(line string) error {
 	}
 	path = strings.Join([]string{joinedPath, path}, "")
 
-	route := NewRoute(method, path, action, fixedArgs, "memory", len(a.Router.Routes), a)
+	route := NewRoute(method, path, action, fixedArgs, "memory", len(a.Router.Routes), tls, a)
 	a.Router.Routes = append(a.Router.Routes, route)
 	//
 	return a.Router.updateTree()
@@ -620,20 +620,13 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 	if v.RedirectTLS {
 		if r.TLS == nil {
 			// redirect to https
-			h0 := strings.Split(r.Host, ":")
-			h1 := strings.Split(app.Config.HostAddrTLS, ":")
-			h0o := h0[0]
-			if len(h1) > 1 {
-				if h1[1] != "443" {
-					h0[0] = h0[0] + ":" + h1[1]
-				}
+			redir, err := getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
+			if err != nil {
+				http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
+				return true
 			}
-			urls := r.URL.String()
-			if strings.Contains(urls, h0o) {
-				urls = strings.Replace(urls, h0o, "", 1)
-			}
-			app.Logger.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
-			http.Redirect(w, r, "https://"+h0[0]+urls, 302)
+			app.Logger.Println("TLS Redirect: ", redir)
+			http.Redirect(w, r, redir, 302)
 			return true
 		}
 	}
@@ -705,7 +698,18 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			if match.Params == nil {
 				match.Params = make(Params)
 			}
-			//TODO: handle TLS redirect (on revel fork first)
+			//handle TLS only
+			if match.TLSOnly && r.TLS == nil {
+				redir, err := getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
+				if err != nil {
+					http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
+					return true
+				}
+				app.Logger.Println("TLS Redirect: ", redir)
+				http.Redirect(w, r, redir, 302)
+				return true
+			}
+			//
 			var inObj *In
 			ul := GetUserLang(w, r)
 			inObj = &In{
