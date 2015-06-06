@@ -388,6 +388,7 @@ func (a *App) loadRoutesNew() error {
 	if err != nil {
 		return errors.New("loadRoutesNew a.Router.Refresh() " + err.Error())
 	}
+	a.Logger.Printf("%v routes loaded.\n", len(a.Router.Routes))
 	return nil
 }
 
