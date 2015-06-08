@@ -5,6 +5,7 @@ import (
 )
 
 type IController interface {
+	GetApp() *App
 	SetApp(app *App)
 	GetPageTitle() string
 	GetLayoutName() string
@@ -64,6 +65,10 @@ func (c *Controller) GetPageTitle() string {
 
 func (c *Controller) GetLayoutName() string {
 	return c.Layout
+}
+
+func (c *Controller) GetApp() *App {
+	return c.App
 }
 
 func (c *Controller) SetApp(app *App) {
