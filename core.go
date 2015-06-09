@@ -68,9 +68,10 @@ func (a *App) getTLSRedirectURL(hostaddrtls string, uri *url.URL) (string, error
 	if uri.Host == "" {
 		if a.Config.DomainName != "" {
 			uri.Host = a.Config.DomainName
+		} else {
+			// it's localhost
+			uri.Host = "localhost"
 		}
-		// it's localhost
-		uri.Host = "localhost"
 	}
 	if p != "443" {
 		uri.Host = uri.Host + ":" + p
