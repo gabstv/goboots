@@ -49,7 +49,7 @@ func trimhost(hostport string) string {
 	return strings.Split(hostport, ":")[0]
 }
 
-func getTLSRedirectURL(hostaddrtls string, uri *url.URL) (string, error) {
+func (a *App) getTLSRedirectURL(hostaddrtls string, uri *url.URL) (string, error) {
 	if uri == nil {
 		return "", errors.New("url is null")
 	}
@@ -66,6 +66,9 @@ func getTLSRedirectURL(hostaddrtls string, uri *url.URL) (string, error) {
 		uri.Scheme = "https"
 	}
 	if uri.Host == "" {
+		if a.Config.DomainName != "" {
+			uri.Host = a.Config.DomainName
+		}
 		// it's localhost
 		uri.Host = "localhost"
 	}

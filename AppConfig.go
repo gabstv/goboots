@@ -16,6 +16,7 @@ type DatabaseConfig struct {
 
 type AppConfig struct {
 	Name            string                    `yaml:"Name"`
+	DomainName      string                    `yaml:"DomainName"`
 	GlobalPageTitle string                    `json:",omitempty"`
 	Version         string                    `yaml:"Version"`
 	HostAddr        string                    `yaml:"HostAddr"`
