@@ -42,3 +42,10 @@ func CompressFilter(in *In) bool {
 	in.closers = append(in.closers, gz)
 	return true
 }
+
+func ServedByProxyFilter(in *In) bool {
+	if v := in.R.Header.Get("X-Forwarded-For"); v != "" {
+		in.R.RemoteAddr = v
+	}
+	return true
+}

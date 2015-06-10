@@ -619,7 +619,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 		return true
 	}
 	if v.RedirectTLS {
-		if r.TLS == nil {
+		if (r.URL.Scheme == "http" || r.URL.Scheme == "ws") || (r.URL.Scheme == "" && r.TLS == nil) {
 			// redirect to https
 			redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
 			if err != nil {
@@ -700,7 +700,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				match.Params = make(Params)
 			}
 			//handle TLS only
-			if match.TLSOnly && r.TLS == nil {
+			if (r.URL.Scheme == "http" || r.URL.Scheme == "ws") || (r.URL.Scheme == "" && r.TLS == nil) {
 				redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
 				if err != nil {
 					http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
