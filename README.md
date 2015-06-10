@@ -1,6 +1,6 @@
 goboots
 =======
-![version 0.4.4](https://img.shields.io/badge/v-0.4.4-blue.svg)  
+![version 0.4.5](https://img.shields.io/badge/v-0.4.5-blue.svg)  
   
 
 ![goboots](https://s3.amazonaws.com/gabstv-github/goboots.png)
@@ -17,20 +17,7 @@ run `goboots new path/to/myprojectname` (e.g. `goboots new github.com/gabstv/myw
 ## Scaffolding:
 - Create a new controller:
   - Be at your project's base folder
-  - Run `goboots scaff c MyControllerName`
-
-## TODO:
-- Change Websocket implementation to [Gorilla](https://github.com/gorilla/websocket)
-- Setup documentation
-- Add example projects
-- Implement idiomatic context like [golang.org/x/net/context](https://godoc.org/golang.org/x/net/context)
-
-## Deprecation:
-- The old routing method will be removed on version 0.5
-
-## Etc:
-
-[now using Robfig's revel routing method](http://revel.github.io/manual/routing.html)  
+  - Run `goboots scaff c MyControllerName` 
 
 ## Benchmarks
 
