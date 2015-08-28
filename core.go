@@ -53,9 +53,13 @@ func (a *App) getTLSRedirectURL(hostaddrtls string, uri *url.URL) (string, error
 	if uri == nil {
 		return "", errors.New("url is null")
 	}
-	_, p, err := net.SplitHostPort(hostaddrtls)
-	if err != nil {
-		return "", err
+	p := a.Config.TLSRedirectPort
+	var err error
+	if p == "" {
+		_, p, err = net.SplitHostPort(hostaddrtls)
+		if err != nil {
+			return "", err
+		}
 	}
 	if uri.Scheme == "ws" {
 		uri.Scheme = "wss"

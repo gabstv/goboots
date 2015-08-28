@@ -620,15 +620,17 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 	}
 	if v.RedirectTLS {
 		if (r.URL.Scheme == "http" || r.URL.Scheme == "ws") || (r.URL.Scheme == "" && r.TLS == nil) {
-			// redirect to https
-			redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
-			if err != nil {
-				http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
+			if hh := r.Header.Get("X-Forwarded-Proto"); hh != "https" && hh != "wss" { // don't redirect if proxy is already secure
+				// redirect to https
+				redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
+				if err != nil {
+					http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
+					return true
+				}
+				app.Logger.Println("TLS Redirect: ", redir)
+				http.Redirect(w, r, redir, 302)
 				return true
 			}
-			app.Logger.Println("TLS Redirect: ", redir)
-			http.Redirect(w, r, redir, 302)
-			return true
 		}
 	}
 

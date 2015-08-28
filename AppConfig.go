@@ -34,6 +34,7 @@ type AppConfig struct {
 	TLSCertificatePath string `yaml:"TLSCertificatePath"`
 	TLSKeyPath         string `yaml:"TLSKeyPath"`
 	TLSRedirect        bool   `yaml:"TLSRedirect"`
+	TLSRedirectPort    string `yaml:"TLSRedirectPort"`
 
 	// Paths
 	RoutesConfigPath string   `yaml:"RoutesConfigPath"`
