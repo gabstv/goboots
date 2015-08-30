@@ -704,14 +704,17 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			}
 			//handle TLS only
 			if (r.URL.Scheme == "http" || r.URL.Scheme == "ws") || (r.URL.Scheme == "" && r.TLS == nil) {
-				redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
-				if err != nil {
-					http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
+				if hh := r.Header.Get("X-Forwarded-Proto"); hh != "https" && hh != "wss" { // don't redirect if proxy is already secure
+					app.Logger.Println("X-Forwarded-Proto: ", hh)
+					redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
+					if err != nil {
+						http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
+						return true
+					}
+					app.Logger.Println("TLS Redirect: ", redir)
+					http.Redirect(w, r, redir, 302)
 					return true
 				}
-				app.Logger.Println("TLS Redirect: ", redir)
-				http.Redirect(w, r, redir, 302)
-				return true
 			}
 			//
 			var inObj *In
