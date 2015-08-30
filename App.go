@@ -621,6 +621,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 	if v.RedirectTLS {
 		if (r.URL.Scheme == "http" || r.URL.Scheme == "ws") || (r.URL.Scheme == "" && r.TLS == nil) {
 			if hh := r.Header.Get("X-Forwarded-Proto"); hh != "https" && hh != "wss" { // don't redirect if proxy is already secure
+				app.Logger.Println("X-Forwarded-Proto: ", hh)
 				// redirect to https
 				redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
 				if err != nil {
