@@ -15,9 +15,11 @@ func TestTedirectURLs(t *testing.T) {
 		[]string{"ws://localhost/randomurl?active=true", "", "false", "hostwithoutport"},
 	}
 
+	app := NewApp()
+
 	for _, v := range uris {
 		uri, _ := url.Parse(v[0])
-		rr, err := getTLSRedirectURL(v[3], uri)
+		rr, err := app.getTLSRedirectURL(v[3], uri)
 		if v[2] == "true" && err != nil {
 			t.Fatalf("Error [1] on url %v\n", v[0])
 		} else if v[2] == "false" && err == nil {

@@ -55,6 +55,7 @@ func NewApp() *App {
 	app := &App{}
 	app.Logger = DefaultLogger()
 	app.Monitor = newMonitor(app)
+	app.Config = &AppConfig{}
 	return app
 }
 
@@ -73,7 +74,7 @@ type appHTTPS struct {
 }
 
 func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if a.app.Config.TLSRedirect {
+	/*if a.app.Config.TLSRedirect {
 		// redirect to https
 		h0 := strings.Split(r.Host, ":")
 		h1 := strings.Split(a.app.Config.HostAddrTLS, ":")
@@ -90,7 +91,7 @@ func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.app.Logger.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
 		http.Redirect(w, r, "https://"+h0[0]+urls, 301)
 		return
-	}
+	}*/
 	a.app.ServeHTTP(w, r)
 }
 
@@ -618,7 +619,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 		app.DoHTTPError(w, r, 501)
 		return true
 	}
-	if v.RedirectTLS {
+	if app.Config.TLSRedirect || v.RedirectTLS {
 		if (r.URL.Scheme == "http" || r.URL.Scheme == "ws") || (r.URL.Scheme == "" && r.TLS == nil) {
 			if hh := r.Header.Get("X-Forwarded-Proto"); hh != "https" && hh != "wss" { // don't redirect if proxy is already secure
 				app.Logger.Println("X-Forwarded-Proto: ", hh)
@@ -703,17 +704,19 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				match.Params = make(Params)
 			}
 			//handle TLS only
-			if (r.URL.Scheme == "http" || r.URL.Scheme == "ws") || (r.URL.Scheme == "" && r.TLS == nil) {
-				if hh := r.Header.Get("X-Forwarded-Proto"); hh != "https" && hh != "wss" { // don't redirect if proxy is already secure
-					app.Logger.Println("X-Forwarded-Proto: ", hh)
-					redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
-					if err != nil {
-						http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
+			if app.Config.TLSRedirect || match.TLSOnly {
+				if (r.URL.Scheme == "http" || r.URL.Scheme == "ws") || (r.URL.Scheme == "" && r.TLS == nil) {
+					if hh := r.Header.Get("X-Forwarded-Proto"); hh != "https" && hh != "wss" { // don't redirect if proxy is already secure
+						app.Logger.Println("X-Forwarded-Proto: ", hh)
+						redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
+						if err != nil {
+							http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
+							return true
+						}
+						app.Logger.Println("TLS Redirect: ", redir)
+						http.Redirect(w, r, redir, 302)
 						return true
 					}
-					app.Logger.Println("TLS Redirect: ", redir)
-					http.Redirect(w, r, redir, 302)
-					return true
 				}
 			}
 			//
