@@ -127,22 +127,25 @@ func runApp(args []string) {
 						}
 						w.Add(evt.Name)
 					} else {
-						break
+						if fn == "_goboots_main_" || strings.HasPrefix(fn, ".") {
+							break
+						}
 					}
 				}
-				print("Rebuild!\n")
+				print("Will restart the app.\n")
 				stop()
 				go func() {
 					for i := 0; i < 1100; i++ {
 						select {
 						case e := <-w.Events:
-							print(fmt.Sprintln(":D", e))
+							fmt.Print(e.Name)
 						default:
 							time.Sleep(time.Millisecond)
 						}
 					}
 				}()
-				time.Sleep(time.Millisecond * 2000)
+				fmt.Print("\n")
+				time.Sleep(time.Millisecond * 1500)
 				start()
 			}
 		case er := <-w.Errors:
