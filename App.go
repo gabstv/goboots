@@ -74,24 +74,6 @@ type appHTTPS struct {
 }
 
 func (a *appHTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	/*if a.app.Config.TLSRedirect {
-		// redirect to https
-		h0 := strings.Split(r.Host, ":")
-		h1 := strings.Split(a.app.Config.HostAddrTLS, ":")
-		h0o := h0[0]
-		if len(h1) > 1 {
-			if h1[1] != "443" {
-				h0[0] = h0[0] + ":" + h1[1]
-			}
-		}
-		urls := r.URL.String()
-		if strings.Contains(urls, h0o) {
-			urls = strings.Replace(urls, h0o, "", 1)
-		}
-		a.app.Logger.Println("TLS Redirect: ", r.URL.String(), "https://"+h0[0]+urls)
-		http.Redirect(w, r, "https://"+h0[0]+urls, 301)
-		return
-	}*/
 	a.app.ServeHTTP(w, r)
 }
 
