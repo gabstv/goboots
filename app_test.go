@@ -3,7 +3,7 @@ package goboots
 import (
 	"bytes"
 	"errors"
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,18 +24,17 @@ func (t *testController) Test(in *In) *Out {
 }
 
 func (t *testController) TestWebsocket(in *In) *Out {
-	msg := make([]byte, 512)
-	n, err := in.Wsock.Read(msg)
+	_, msg, err := in.Wsock.ReadMessage()
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Receive: %s\n", msg[:n])
+	log.Printf("Receive: %s\n", msg)
 
-	m, err := in.Wsock.Write(msg[:n])
+	err = in.Wsock.WriteMessage(websocket.TextMessage, []byte("hello"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Sent: %s\n", msg[:m])
+	log.Printf("Sent: %s\n", "hello")
 	return nil
 }
 
@@ -110,21 +109,22 @@ func TestApp(t *testing.T) {
 	}
 
 	// test websocket
-	ws, err := websocket.Dial("ws://localhost:8001/ws", "", "http://localhost/")
+	dialer := websocket.DefaultDialer
+	ws, _, err := dialer.Dial("ws://localhost:8001/ws", nil)
+	//ws, err := websocket.Dial("ws://localhost:8001/ws", "", "http://localhost/")
 	if err != nil {
 		t.Fatal("could not dial (websocket)", err)
 	}
 	message := []byte("hello, websocket!")
-	_, err = ws.Write(message)
+	err = ws.WriteMessage(websocket.TextMessage, message)
 	if err != nil {
 		t.Fatal("could not write (websocket)", err)
 	}
-	var msg = make([]byte, 512)
-	n, err := ws.Read(msg)
+	_, p, err := ws.ReadMessage()
 	if err != nil {
 		t.Fatal("could not read (websocket)", err)
 	}
-	t.Log(string(msg[:n]))
+	t.Log(string(p))
 }
 
 type testDBSession struct {

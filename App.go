@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -23,6 +23,13 @@ import (
 	"sync"
 	"text/template"
 	"time"
+)
+
+var (
+	wsupgrader = websocket.Upgrader{
+		ReadBufferSize:  2048,
+		WriteBufferSize: 2048,
+	}
 )
 
 type App struct {
@@ -645,14 +652,13 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 			http.Error(w, "Method not allowed", 405)
 			return true
 		}
-		websocket.Handler(func(ws *websocket.Conn) {
-			// overwrite Read/Write timeout to something reasobnable for a websocket
-			ws.SetDeadline(time.Now().Add(time.Hour * 24))
-			r.Method = "WS"
-			inObj.Wsock = ws
-			app.handleReq(c, inObj)
-		}).ServeHTTP(w, r)
-		return true
+		conn, err := wsupgrader.Upgrade(w, r, nil)
+		if err != nil {
+			http.Error(w, err.Error(), 501)
+			return true
+		}
+		r.Method = "WS"
+		inObj.Wsock = conn
 	}
 
 	return app.handleReq(c, inObj)
@@ -725,14 +731,17 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 
 			upgrade := r.Header.Get("Upgrade")
 			if upgrade == "websocket" || upgrade == "Websocket" {
-				websocket.Handler(func(ws *websocket.Conn) {
-					// overwrite Read/Write timeout to something reasobnable for a websocket
-					ws.SetDeadline(time.Now().Add(time.Hour * 24))
-					r.Method = "WS"
-					inObj.Wsock = ws
-					app.handleReq(c, inObj)
-				}).ServeHTTP(w, r)
-				return true
+				if r.Method != "GET" {
+					http.Error(w, "Method not allowed", 405)
+					return true
+				}
+				conn, err := wsupgrader.Upgrade(w, r, nil)
+				if err != nil {
+					http.Error(w, err.Error(), 501)
+					return true
+				}
+				r.Method = "WS"
+				inObj.Wsock = conn
 			}
 
 			return app.handleReq(c, inObj)

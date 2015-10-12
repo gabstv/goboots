@@ -7,7 +7,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"github.com/gabstv/i18ngo"
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 	"io"
 	"io/ioutil"
 	"net/http"
