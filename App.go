@@ -89,6 +89,7 @@ func (a *appHTTPS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	app.Monitor.activeThreads.increment()
 	defer app.Monitor.activeThreads.subtract()
 	routed := app.enroute(w, r)
@@ -96,19 +97,48 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !routed {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && app.Config.GZipStatic {
 			// use gzip
-			if app.Config.StaticAccessLog {
-				app.Logger.Println(hostonly(r.RemoteAddr), "[RGZ] ", r.URL.String())
-			}
 			w.Header().Set("Content-Encoding", "gzip")
 			gz := gzip.NewWriter(w)
 			gzr := &gzipRespWriter{gz, w}
 			app.servePublicFolder(gzr, r)
 			gz.Close()
-		} else {
 			if app.Config.StaticAccessLog {
-				app.Logger.Println(hostonly(r.RemoteAddr), "[ R ] ", r.URL.String())
+				addr := r.Header.Get("X-Real-IP")
+				if addr == "" {
+					addr = r.Header.Get("X-Forwarded-For")
+					if addr == "" {
+						addr = r.RemoteAddr
+					}
+				}
+				app.Logger.Println(hostonly(addr), "[RGZ] ", r.URL.String(), time.Since(start))
 			}
+		} else {
 			app.servePublicFolder(w, r)
+			if app.Config.StaticAccessLog {
+				addr := r.Header.Get("X-Real-IP")
+				if addr == "" {
+					addr = r.Header.Get("X-Forwarded-For")
+					if addr == "" {
+						addr = r.RemoteAddr
+					}
+				}
+				app.Logger.Println(hostonly(addr), "[ R ] ", r.URL.String(), time.Since(start))
+			}
+		}
+	} else {
+		if app.Config.DynamicAccessLog {
+			addr := r.Header.Get("X-Real-IP")
+			if addr == "" {
+				addr = r.Header.Get("X-Forwarded-For")
+				if addr == "" {
+					addr = r.RemoteAddr
+				}
+			}
+			if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") || !app.Config.GZipDynamic {
+				app.Logger.Println(hostonly(addr), "{ R } ", r.RequestURI, time.Since(start))
+			} else {
+				app.Logger.Println(hostonly(addr), "{RGZ} ", r.RequestURI, time.Since(start))
+			}
 		}
 	}
 }
@@ -673,7 +703,6 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 	}
 	if app.Router != nil {
 		match := app.Router.Route(r)
-		//app.Logger.Println("new router match!", match)
 		if match != nil {
 			if match.Action == "404" {
 				//TODO: clean flash

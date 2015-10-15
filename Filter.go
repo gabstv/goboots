@@ -27,13 +27,7 @@ func (w gzipRespWriter) Write(b []byte) (int, error) {
 // based on https://gist.github.com/the42/1956518
 func CompressFilter(in *In) bool {
 	if !strings.Contains(in.R.Header.Get("Accept-Encoding"), "gzip") || !in.App.Config.GZipDynamic {
-		if in.App.Config.DynamicAccessLog {
-			in.App.Logger.Println(hostonly(in.R.RemoteAddr), "{ R } ", in.R.RequestURI)
-		}
 		return true
-	}
-	if in.App.Config.DynamicAccessLog {
-		in.App.Logger.Println(hostonly(in.R.RemoteAddr), "{RGZ} ", in.R.RequestURI)
 	}
 	in.W.Header().Set("Content-Encoding", "gzip")
 	gz := gzip.NewWriter(in.W)
