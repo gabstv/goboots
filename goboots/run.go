@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -87,6 +88,16 @@ func runApp(args []string) {
 			err = cm.Start()
 			if err != nil {
 				print("Could not init the app: " + err.Error() + "\n")
+			} else {
+				if runtime.GOOS == "darwin" {
+					cmnot := exec.Command("terminal-notifier", "-message", "Goboots app started!")
+					if cmer := cmnot.Run(); cmer != nil {
+						print("\nGoboots app started! You can get a notification up if you install terminal-notifier:\n")
+						print("brew install terminal-notifier\n")
+					}
+					print("\n\n")
+				}
+				//TODO: notification for linux/windows
 			}
 		}
 	}
@@ -144,6 +155,14 @@ func runApp(args []string) {
 					}
 				}
 				print("Will restart the app.\n")
+				if runtime.GOOS == "darwin" {
+					cmnot := exec.Command("terminal-notifier", "-message", "Goboots app will restart.")
+					if cmer := cmnot.Run(); cmer != nil {
+						//print("\nGoboots app started! You can get a notification up if you install terminal-notifier:\n")
+						//print("brew install terminal-notifier\n")
+					}
+					print("\n\n")
+				}
 				stop()
 				go func() {
 					for i := 0; i < 1100; i++ {
