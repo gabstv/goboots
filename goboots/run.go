@@ -34,6 +34,7 @@ func runApp(args []string) {
 	defaultgofile := "main.go"
 	if len(args) > 0 {
 		defaultgofile = args[0]
+		print(defaultgofile + "\n")
 	}
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -42,16 +43,26 @@ func runApp(args []string) {
 	defer w.Close()
 	wd, _ := os.Getwd()
 	w.Add(wd)
+	//TODO: replace walk function
 	filepath.Walk(wd, func(p string, i os.FileInfo, er error) error {
 		if er != nil {
 			return nil
 		}
 		if i.IsDir() {
+			if strings.Contains(p, "/.") {
+				return filepath.SkipDir
+			}
+			if strings.Contains(p, "/_") {
+				return filepath.SkipDir
+			}
 			bdir := dir_remainder(p)
 			if strings.HasPrefix(bdir, ".") {
-				return nil
+				return filepath.SkipDir
 			}
 			w.Add(p)
+			print(p + "\n")
+		} else {
+			//print("FILE: " + p + "\n")
 		}
 		return nil
 	})
