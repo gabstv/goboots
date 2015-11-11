@@ -772,7 +772,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				}
 				app.Logger.Println("websocket will upgrade")
 				inObj.hijacked = true
-				conn, err := wsupgrader.Upgrade(w, r, nil)
+				conn, err := wsupgrader.Upgrade(w, r, r.Header)
 				if err != nil {
 					app.Logger.Println("websocket upgrade error", err)
 					//http.Error(w, err.Error(), 501)
