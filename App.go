@@ -761,11 +761,14 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			upgrade := r.Header.Get("Upgrade")
 			if upgrade == "websocket" || upgrade == "Websocket" {
 				if r.Method != "GET" {
+					app.Logger.Println("websocket method not allowed")
 					http.Error(w, "Method not allowed", 405)
 					return true
 				}
+				app.Logger.Println("websocket will upgrade")
 				conn, err := wsupgrader.Upgrade(w, r, nil)
 				if err != nil {
+					app.Logger.Println("websocket upgrade error", err)
 					http.Error(w, err.Error(), 501)
 					return true
 				}
