@@ -45,6 +45,7 @@ type In struct {
 	reqbodyw       *InBodyWrapper
 	controllerName string
 	methodName     string
+	hijacked       bool
 }
 
 // New clones a new In but without the content.
