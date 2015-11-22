@@ -49,6 +49,8 @@ type AppConfig struct {
 	Verbose          bool
 	GZipDynamic      bool
 	GZipStatic       bool
+
+	StaticIndexFiles []string `yaml:"StaticIndexFiles"`
 }
 
 func (a *AppConfig) ParseEnv() {

@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
-	"fmt"
+	//"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
 	"github.com/gorilla/websocket"
@@ -103,7 +103,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Encoding", "gzip")
 			gz := gzip.NewWriter(w)
 			gzr := &gzipRespWriter{gz, w}
-			app.servePublicFolder(gzr, r)
+			staticStatus := app.servePublicFolder(gzr, r)
 			gz.Close()
 			if app.Config.StaticAccessLog {
 				addr := r.Header.Get("X-Real-IP")
@@ -113,10 +113,10 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						addr = r.RemoteAddr
 					}
 				}
-				app.Logger.Println(addr, "[RGZ] ", r.URL.String(), time.Since(start))
+				app.Logger.Println(addr, "[RGZ] ", r.URL.String(), staticStatus, time.Since(start))
 			}
 		} else {
-			app.servePublicFolder(w, r)
+			staticStatus := app.servePublicFolder(w, r)
 			if app.Config.StaticAccessLog {
 				addr := r.Header.Get("X-Real-IP")
 				if addr == "" {
@@ -125,7 +125,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						addr = r.RemoteAddr
 					}
 				}
-				app.Logger.Println(addr, "[ R ] ", r.URL.String(), time.Since(start))
+				app.Logger.Println(addr, "[ R ] ", r.URL.String(), staticStatus, time.Since(start))
 			}
 		}
 	} else {
@@ -242,40 +242,37 @@ func (a *App) GetLocalizedLayout(name string, w http.ResponseWriter, r *http.Req
 
 func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
 	//TODO: i18n HTTP Errors
-	w.WriteHeader(err)
-	errorLayout := a.GetLayout("error")
-	if errorLayout == nil {
-		http.Error(w, httpErrorStrings[err], err)
-		return
-	}
-	var erDesc string
-	switch err {
-	case 400:
-		erDesc = "<strong>Bad Request</strong> - The request cannot be fulfilled due to bad syntax."
-	case 401:
-		erDesc = "<strong>Unauthorized</strong> - You must authenticate to view the source."
-	case 403:
-		erDesc = "<strong>Forbidden</strong> - You're not authorized to view the requested source."
-	case 404:
-		erDesc = "<strong>Not Found</strong> - The requested resource could not be found."
-	case 405:
-		erDesc = "<strong>Method Not Allowed</strong> - A request was made of a resource using a request method not supported by that resource."
-	case 406:
-		erDesc = "<strong>Not Acceptable</strong> - The requested resource is only capable of generating content not acceptable according to the Accept headers sent in the request."
-	default:
-		erDesc = "<a href=\"http://en.wikipedia.org/wiki/List_of_HTTP_status_codes\">The request could not be fulfilled.</a>"
-	}
-	if errorLayout == nil {
-		fmt.Fprint(w, erDesc)
-		return
-	}
-	page := &ErrorPageContent{
-		Title:        a.Config.Name + " - " + fmt.Sprintf("%d", err),
-		ErrorTitle:   fmt.Sprintf("%d", err),
-		ErrorMessage: erDesc,
-		Content:      " ",
-	}
-	errorLayout.Execute(w, page)
+	//w.WriteHeader(err)
+	//errorLayout := a.GetLayout("error")
+	//if errorLayout == nil {
+	http.Error(w, httpErrorStrings[err], err)
+	return
+	//}
+	////var erDesc string
+	////switch err {
+	////case 400:
+	////	erDesc = "<strong>Bad Request</strong> - The request cannot be fulfilled due to bad syntax."
+	////case 401:
+	////	erDesc = "<strong>Unauthorized</strong> - You must authenticate to view the source."
+	////case 403:
+	////	erDesc = "<strong>Forbidden</strong> - You're not authorized to view the requested source."
+	////case 404:
+	////	erDesc = "<strong>Not Found</strong> - The requested resource could not be found."
+	////case 405:
+	////	erDesc = "<strong>Method Not Allowed</strong> - A request was made of a resource using a request method not supported by that resource."
+	////case 406:
+	////	erDesc = "<strong>Not Acceptable</strong> - The requested resource is only capable of generating content not acceptable according to the Accept headers sent in the request."
+	////default:
+	////	erDesc = "<a href=\"http://en.wikipedia.org/wiki/List_of_HTTP_status_codes\">The request could not be fulfilled.</a>"
+	////}
+	////page := &ErrorPageContent{
+	////	Title:        a.Config.Name + " - " + fmt.Sprintf("%d", err),
+	////	ErrorTitle:   fmt.Sprintf("%d", err),
+	////	ErrorMessage: erDesc,
+	////	Content:      " ",
+	////}
+	////w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	////a.Logger.Println("http error", errorLayout.Execute(w, page))
 }
 
 func (a *App) BenchLoadAll() error {
@@ -598,7 +595,7 @@ func (a *App) loadTemplates() error {
 	return nil
 }
 
-func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) {
+func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) int {
 	//niceurl, _ := url.QueryUnescape(r.URL.String())
 	niceurl := r.URL.Path
 	//TODO: place that into access log
@@ -610,14 +607,25 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) {
 	info, err := os.Stat(fdir)
 	if os.IsNotExist(err) {
 		app.DoHTTPError(w, r, 404)
-		return
+		return 404
 	}
 	if info.IsDir() {
+		// resolve static index files
+		if app.Config.StaticIndexFiles != nil {
+			for _, v := range app.Config.StaticIndexFiles {
+				j := filepath.Join(fdir, v)
+				if _, err2 := os.Stat(j); err2 == nil {
+					http.ServeFile(w, r, j)
+					return 200
+				}
+			}
+		}
 		app.DoHTTPError(w, r, 403)
-		return
+		return 403
 	}
 	//
 	http.ServeFile(w, r, fdir)
+	return 200
 }
 
 func (a *App) oldRouteMatch(niceurl string) *OldRoute {
@@ -699,6 +707,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 }
 
 func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
+	app.Logger.Println("[ENROUTE]", r.URL.String()) //DELETEME
 	niceurl, _ := url.QueryUnescape(r.URL.String())
 	niceurl = strings.Split(niceurl, "?")[0]
 	urlbits := strings.Split(niceurl, "/")[1:]
