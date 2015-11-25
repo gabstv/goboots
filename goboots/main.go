@@ -40,7 +40,8 @@ Commands:
 Use "goboots help [command]" for more information.
 `
 
-var commands = []*Command{cmdNew, cmdScaff, cmdRun}
+var commands = []*Command{cmdNew, cmdScaff, cmdRun, cmdStatic}
+var cwd string
 
 type Command struct {
 	Run                    func(args []string)
@@ -57,6 +58,7 @@ func (cmd *Command) Name() string {
 }
 
 func main() {
+	cwd, _ = os.Getwd()
 	fmt.Fprintln(os.Stdout, header)
 	flag.Usage = func() { usage(1) }
 	flag.Parse()
