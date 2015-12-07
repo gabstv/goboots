@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"gopkg.in/fsnotify.v1"
 	"os"
@@ -14,10 +15,14 @@ import (
 )
 
 var cmdRun = &Command{
-	UsageLine: "run [file.go]",
+	UsageLine: "run [file.go] [[args]]",
 	Short:     "Runs a Goboots App.",
 	Long: `
 Runs a Goboots App with live code reloading.
+
+Flags:
+	prebuild
+        -prebuild=./prebuildscript.sh | Execute a file before building.
 `,
 }
 
@@ -33,10 +38,19 @@ func dir_remainder(a string) string {
 
 func runApp(args []string) {
 	defaultgofile := "main.go"
+	prebuildexec := ""
 	if len(args) > 0 {
 		defaultgofile = args[0]
 		print(defaultgofile + "\n")
 	}
+
+	if len(args) > 1 {
+		fs := flag.NewFlagSet("StaticFlags", flag.ContinueOnError)
+
+		fs.StringVar(&prebuildexec, "prebuild", "", `-prebuild="./prebuildscript.sh"`)
+		fs.Parse(args[1:])
+	}
+
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		errorf("Could not init file watcher: " + err.Error() + "\n")
@@ -73,6 +87,15 @@ func runApp(args []string) {
 		cmbuild := exec.Command("go", "build", "-o", "_goboots_main_", defaultgofile)
 		cmbuild.Stderr = os.Stderr
 		cmbuild.Stdout = os.Stdout
+		// run prebuild if any
+		if len(prebuildexec) > 0 {
+			cmpre := exec.Command(prebuildexec)
+			cmbuild.Stderr = os.Stderr
+			cmbuild.Stdout = os.Stdout
+			fmt.Println("Running prebuild command", prebuildexec)
+			cmpre.Run()
+		}
+		//
 		if err := cmbuild.Start(); err != nil {
 			print("Could not build the app: " + err.Error() + "\n")
 			cm = nil
