@@ -707,7 +707,6 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 }
 
 func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
-	app.Logger.Println("[ENROUTE]", r.URL.String()) //DELETEME
 	niceurl, _ := url.QueryUnescape(r.URL.String())
 	niceurl = strings.Split(niceurl, "?")[0]
 	urlbits := strings.Split(niceurl, "/")[1:]
@@ -715,6 +714,10 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 		return app.enrouteOld(niceurl, urlbits, w, r)
 	}
 	if app.Router != nil {
+		upgrade := r.Header.Get("Upgrade")
+		if r.Method == "GET" && (upgrade == "websocket" || upgrade == "Websocket") {
+			r.Method = "WS"
+		}
 		match := app.Router.Route(r)
 		if match != nil {
 			if match.Action == "404" {
@@ -772,9 +775,8 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				false,
 			}
 
-			upgrade := r.Header.Get("Upgrade")
 			if upgrade == "websocket" || upgrade == "Websocket" {
-				if r.Method != "GET" {
+				if r.Method != "WS" {
 					app.Logger.Println("websocket method not allowed")
 					http.Error(w, "Method not allowed", 405)
 					return true
@@ -787,7 +789,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 					//http.Error(w, err.Error(), 501)
 					return true
 				}
-				r.Method = "WS"
+				//r.Method = "WS"
 				inObj.Wsock = conn
 			}
 
