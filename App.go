@@ -691,7 +691,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 	upgrade := r.Header.Get("Upgrade")
 	if upgrade == "websocket" || upgrade == "Websocket" {
 		if r.Method != "GET" {
-			http.Error(w, "Method not allowed", 405)
+			http.Error(w, "Method not allowed "+r.Method, 405)
 			return true
 		}
 		conn, err := wsupgrader.Upgrade(w, r, nil)
@@ -783,6 +783,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				}
 				app.Logger.Println("websocket will upgrade")
 				inObj.hijacked = true
+				r.Method = "GET"
 				conn, err := wsupgrader.Upgrade(w, r, nil)
 				if err != nil {
 					app.Logger.Println("websocket upgrade error", err)
