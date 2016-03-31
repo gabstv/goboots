@@ -39,6 +39,9 @@ type connectionPaths struct {
 func (c *connectionPaths) Add(p string) {
 	c.locker.Lock()
 	defer c.locker.Unlock()
+	if c.list == nil {
+		c.list = make(map[string]int)
+	}
 	if v, ok := c.list[p]; ok {
 		c.list[p] = v + 1
 	} else {
@@ -49,6 +52,9 @@ func (c *connectionPaths) Add(p string) {
 func (c *connectionPaths) Remove(p string) {
 	c.locker.Lock()
 	defer c.locker.Unlock()
+	if c.list == nil {
+		c.list = make(map[string]int)
+	}
 	if v, ok := c.list[p]; ok {
 		if v == 1 {
 			delete(c.list, p)
