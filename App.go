@@ -93,8 +93,15 @@ func (a *appHTTPS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	urls := r.URL.String()
+	//
+	//
 	app.Monitor.activeThreads.increment()
 	defer app.Monitor.activeThreads.subtract()
+	app.Monitor.openConnectionPaths.Add(urls)
+	defer app.Monitor.openConnectionPaths.Remove(urls)
+	//
+	//
 	routed := app.enroute(w, r)
 	//if routes didn't find anything
 	if !routed {
@@ -113,7 +120,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						addr = r.RemoteAddr
 					}
 				}
-				app.Logger.Println(addr, "[RGZ] ", r.URL.String(), staticStatus, time.Since(start))
+				app.Logger.Println(addr, "[RGZ] ", urls, staticStatus, time.Since(start))
 			}
 		} else {
 			staticStatus := app.servePublicFolder(w, r)
@@ -125,7 +132,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						addr = r.RemoteAddr
 					}
 				}
-				app.Logger.Println(addr, "[ R ] ", r.URL.String(), staticStatus, time.Since(start))
+				app.Logger.Println(addr, "[ R ] ", urls, staticStatus, time.Since(start))
 			}
 		}
 	} else {
