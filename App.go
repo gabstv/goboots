@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
-	//"fmt"
+	"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
 	"github.com/gorilla/websocket"
@@ -45,6 +45,7 @@ type App struct {
 	ByteCaches    *ByteCacheCollection
 	GenericCaches *GenericCacheCollection
 	Random        *rand.Rand
+	HTTPErrorFunc func(w http.ResponseWriter, r *http.Request, err int)
 	// private
 	controllerMap   map[string]IController
 	templateMap     map[string]*templateInfo
@@ -248,38 +249,24 @@ func (a *App) GetLocalizedLayout(name string, w http.ResponseWriter, r *http.Req
 }
 
 func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
-	//TODO: i18n HTTP Errors
-	//w.WriteHeader(err)
-	//errorLayout := a.GetLayout("error")
-	//if errorLayout == nil {
+	// try the custom error function
+	if a.HTTPErrorFunc != nil {
+		a.HTTPErrorFunc(w, r, err)
+		return
+	}
+	// try layouts
+	if lay := a.GetLocalizedLayout(fmt.Sprint(err), w, r); lay != nil {
+		w.WriteHeader(err)
+		lay.Execute(w, nil)
+		return
+	}
+	if lay := a.GetLayout(fmt.Sprint(err)); lay != nil {
+		w.WriteHeader(err)
+		lay.Execute(w, nil)
+		return
+	}
 	http.Error(w, httpErrorStrings[err], err)
 	return
-	//}
-	////var erDesc string
-	////switch err {
-	////case 400:
-	////	erDesc = "<strong>Bad Request</strong> - The request cannot be fulfilled due to bad syntax."
-	////case 401:
-	////	erDesc = "<strong>Unauthorized</strong> - You must authenticate to view the source."
-	////case 403:
-	////	erDesc = "<strong>Forbidden</strong> - You're not authorized to view the requested source."
-	////case 404:
-	////	erDesc = "<strong>Not Found</strong> - The requested resource could not be found."
-	////case 405:
-	////	erDesc = "<strong>Method Not Allowed</strong> - A request was made of a resource using a request method not supported by that resource."
-	////case 406:
-	////	erDesc = "<strong>Not Acceptable</strong> - The requested resource is only capable of generating content not acceptable according to the Accept headers sent in the request."
-	////default:
-	////	erDesc = "<a href=\"http://en.wikipedia.org/wiki/List_of_HTTP_status_codes\">The request could not be fulfilled.</a>"
-	////}
-	////page := &ErrorPageContent{
-	////	Title:        a.Config.Name + " - " + fmt.Sprintf("%d", err),
-	////	ErrorTitle:   fmt.Sprintf("%d", err),
-	////	ErrorMessage: erDesc,
-	////	Content:      " ",
-	////}
-	////w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	////a.Logger.Println("http error", errorLayout.Execute(w, page))
 }
 
 func (a *App) BenchLoadAll() error {
