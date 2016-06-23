@@ -360,7 +360,7 @@ func (o *Out) mustb(b []byte, err error) []byte {
 	return b
 }
 
-func (o *Out) render(w http.ResponseWriter) {
+func (o *Out) Render(w http.ResponseWriter) {
 	switch o.kind {
 	case outJSON:
 		defer func() {

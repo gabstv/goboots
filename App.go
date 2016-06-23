@@ -811,7 +811,7 @@ func (app *App) handleReq(c IController, in *In) bool {
 		return true
 	} else {
 		if prec.kind != outPre {
-			prec.render(in.W)
+			prec.Render(in.W)
 			return true
 		}
 	}
@@ -839,7 +839,7 @@ func (app *App) handleReq(c IController, in *In) bool {
 	out := rVal.Val.Call(inz)
 	o0, _ := (out[0].Interface()).(*Out)
 	if o0 != nil {
-		o0.render(in.W)
+		o0.Render(in.W)
 	}
 	if in.session != nil {
 		in.session.Flash.Clear()
