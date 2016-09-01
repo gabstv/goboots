@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -314,6 +315,10 @@ func (in *In) URLQ() url.Values {
 
 func (in *In) FormVal(key string) string {
 	return in.R.FormValue(key)
+}
+
+func (in *In) FormFile(key string) (multipart.File, *multipart.FileHeader, error) {
+	return in.R.FormFile(key)
 }
 
 func (inbw *InBodyWrapper) UnmarshalJSON(v interface{}) error {
