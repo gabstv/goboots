@@ -248,6 +248,28 @@ func (s *Session) GetInt32D(key string, defaultValue int) int {
 	return int(reflect.ValueOf(iface).Int())
 }
 
+func (s *Session) GetInt64(key string) (int64, bool) {
+	if s.Data == nil {
+		return 0, false
+	}
+	iface, ok := s.Data[key]
+	if !ok {
+		return 0, false
+	}
+	return reflect.ValueOf(iface).Int(), true
+}
+
+func (s *Session) GetInt64D(key string, defaultValue int64) int64 {
+	if s.Data == nil {
+		return defaultValue
+	}
+	iface, ok := s.Data[key]
+	if !ok {
+		return defaultValue
+	}
+	return reflect.ValueOf(iface).Int()
+}
+
 func (s *Session) GetString(key string) (string, bool) {
 	if s.Data == nil {
 		return "", false
