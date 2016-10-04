@@ -2,8 +2,8 @@ package goboots
 
 import (
 	"bytes"
-	"code.google.com/p/go-uuid/uuid"
 	"errors"
+	"github.com/gabstv/go-uuid/uuid"
 	"github.com/gabstv/i18ngo"
 	"log"
 	"net"
