@@ -100,13 +100,13 @@ func (m *MysqlDBSession) connect() error {
 	var err error
 	str, ok := m.app.Config.SessionDb.(string)
 	if ok {
-		connstr = m.app.Config.Databases[str].Connection
+		connstr = m.app.Config.Databases[str].Host
 		db = m.app.Config.Databases[str].Database
 		un = m.app.Config.Databases[str].User
 		pw = m.app.Config.Databases[str].Password
 	} else {
 		mmap := m.app.Config.SessionDb.(map[string]string)
-		connstr = mmap["Connection"]
+		connstr = mmap["Host"]
 		db = mmap["Database"]
 		un = mmap["User"]
 		pw = mmap["Password"]
