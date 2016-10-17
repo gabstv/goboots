@@ -234,7 +234,13 @@ func (s *Session) GetInt32(key string) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	return int(reflect.ValueOf(iface).Int()), true
+	if vvv, ok := iface.(int); ok {
+		return vvv, true
+	}
+	if vvv, ok := iface.(float64); ok {
+		return int(vvv), true
+	}
+	return 0, false
 }
 
 func (s *Session) GetInt32D(key string, defaultValue int) int {
@@ -245,7 +251,13 @@ func (s *Session) GetInt32D(key string, defaultValue int) int {
 	if !ok {
 		return defaultValue
 	}
-	return int(reflect.ValueOf(iface).Int())
+	if vvv, ok := iface.(int); ok {
+		return vvv
+	}
+	if vvv, ok := iface.(float64); ok {
+		return int(vvv)
+	}
+	return defaultValue
 }
 
 func (s *Session) GetInt64(key string) (int64, bool) {
