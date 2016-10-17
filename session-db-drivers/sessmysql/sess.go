@@ -37,6 +37,7 @@ func (m *MysqlDBSession) GetSession(sid string) (*goboots.Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	msession.SID = sid
 	msession.Time = stime
 	msession.Updated = updated
 	msession.Data = umshl(data)
