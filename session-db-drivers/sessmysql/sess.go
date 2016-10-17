@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gabstv/goboots"
+	"github.com/gabstv/goboots/session-db-drivers/sessmysql/files"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	"io/ioutil"
 	"time"
 )
 
@@ -117,7 +117,7 @@ func (m *MysqlDBSession) connect() error {
 		return err
 	}
 	// check if table exists!
-	sqlsb, err := ioutil.ReadFile("create.sql")
+	sqlsb, err := files.RawCreateSqlBytes()
 	if err != nil {
 		return err
 	}
