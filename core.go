@@ -297,6 +297,9 @@ func (s *Session) Expire(t time.Time) {
 }
 
 func (s *Session) GetExpires() time.Time {
+	if s.r == nil {
+		return time.Now().Add(time.Hour * 1)
+	}
 	cookie, err := s.r.Cookie("goboots_sessid")
 	if err != nil {
 		log.Println("Error @ (s *Session) GetExpires()", err)
