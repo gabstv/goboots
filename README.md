@@ -1,6 +1,6 @@
 goboots
 =======
-![version 0.6.7](https://img.shields.io/badge/v-0.6.7-blue.svg)  
+![version 0.6.8](https://img.shields.io/badge/v-0.6.8-blue.svg)  
   
 
 ![goboots](https://s3.amazonaws.com/gabstv-github/goboots.png)
