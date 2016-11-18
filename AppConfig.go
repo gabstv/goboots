@@ -31,10 +31,12 @@ type AppConfig struct {
 	Data            map[string]string         `yaml:"Data"`
 
 	// TLS
-	TLSCertificatePath string `yaml:"TLSCertificatePath"`
-	TLSKeyPath         string `yaml:"TLSKeyPath"`
-	TLSRedirect        bool   `yaml:"TLSRedirect"`
-	TLSRedirectPort    string `yaml:"TLSRedirectPort"`
+	TLSCertificatePath   string   `yaml:"TLSCertificatePath"`
+	TLSKeyPath           string   `yaml:"TLSKeyPath"`
+	TLSRedirect          bool     `yaml:"TLSRedirect"`
+	TLSRedirectPort      string   `yaml:"TLSRedirectPort"`
+	TLSAutocert          bool     `yaml:"TLSAutocert"`
+	TLSAutocertWhitelist []string `yaml:"TLSAutocertWhitelist"`
 
 	// Paths
 	RoutesConfigPath string   `yaml:"RoutesConfigPath"`

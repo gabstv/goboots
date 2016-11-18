@@ -3,12 +3,14 @@ package goboots
 import (
 	by "bytes"
 	"compress/gzip"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
 	"github.com/gorilla/websocket"
+	"golang.org/x/crypto/acme/autocert"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -186,8 +188,21 @@ func (app *App) listen() {
 
 func (app *App) listenTLS() {
 	app.loadAll()
+	if app.Config.TLSAutocert && app.Config.TLSAutocertWhitelist != nil && len(app.Config.TLSAutocertWhitelist) > 0 {
+		m := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(app.Config.TLSAutocertWhitelist...),
+		}
+		s := &http.Server{
+			Addr:      app.Config.HostAddrTLS,
+			TLSConfig: &tls.Config{GetCertificate: m.GetCertificate},
+		}
+		er4 := s.ListenAndServeTLS("", "")
+		app.mainChan <- er4
+		return
+	}
 	if len(app.Config.HostAddrTLS) < 1 || (len(app.Config.TLSCertificatePath) < 1 && len(app.Config.TLSKeyPath) < 1) {
-		//TODO: error is TLS needs to be enforced (add config option)
+		//TODO: error if TLS needs to be enforced (add config option)
 		return
 	}
 	if len(app.Config.TLSCertificatePath) < 1 || len(app.Config.TLSKeyPath) < 1 {

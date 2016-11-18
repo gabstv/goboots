@@ -1,3 +1,6 @@
+### 0.7.0
+- Autocert support
+
 ### 0.6.8
 - Mysql session db driver
 
