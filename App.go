@@ -803,11 +803,11 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 
 			if upgrade == "websocket" || upgrade == "Websocket" {
 				if r.Method != "WS" {
-					app.Logger.Println("websocket method not allowed")
+					app.Logger.Println("websocket method not allowed " + r.URL.String())
 					http.Error(w, "Method not allowed", 405)
 					return true
 				}
-				app.Logger.Println("websocket will upgrade")
+				//app.Logger.Println("websocket will upgrade")
 				inObj.hijacked = true
 				r.Method = "GET"
 				conn, err := wsupgrader.Upgrade(w, r, nil)
