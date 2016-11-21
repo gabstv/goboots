@@ -1,3 +1,6 @@
+### 0.7.1
+- Separated access log
+
 ### 0.7.0
 - Autocert support
 

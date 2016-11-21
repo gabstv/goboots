@@ -60,6 +60,7 @@ type App struct {
 	loadedAll       bool
 	Monitor         appMonitor
 	Logger          Logger
+	AccessLogger    Logger
 	//
 	globalLoadOnce sync.Once
 }
@@ -123,7 +124,11 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						addr = r.RemoteAddr
 					}
 				}
-				app.Logger.Println(addr, "[RGZ] ", urls, staticStatus, time.Since(start))
+				if app.AccessLogger == nil {
+					app.Logger.Println(addr, "[RGZ] ", urls, staticStatus, time.Since(start))
+				} else {
+					app.AccessLogger.Println(addr, "[RGZ] ", urls, staticStatus, time.Since(start))
+				}
 			}
 		} else {
 			staticStatus := app.servePublicFolder(w, r)
@@ -135,7 +140,11 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						addr = r.RemoteAddr
 					}
 				}
-				app.Logger.Println(addr, "[ R ] ", urls, staticStatus, time.Since(start))
+				if app.AccessLogger == nil {
+					app.Logger.Println(addr, "[ R ] ", urls, staticStatus, time.Since(start))
+				} else {
+					app.AccessLogger.Println(addr, "[ R ] ", urls, staticStatus, time.Since(start))
+				}
 			}
 		}
 	} else {
@@ -148,9 +157,17 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") || !app.Config.GZipDynamic {
-				app.Logger.Println(addr, "{ R } ", r.RequestURI, time.Since(start))
+				if app.AccessLogger == nil {
+					app.Logger.Println(addr, "{ R } ", r.RequestURI, time.Since(start))
+				} else {
+					app.AccessLogger.Println(addr, "{ R } ", r.RequestURI, time.Since(start))
+				}
 			} else {
-				app.Logger.Println(addr, "{RGZ} ", r.RequestURI, time.Since(start))
+				if app.AccessLogger == nil {
+					app.Logger.Println(addr, "{RGZ} ", r.RequestURI, time.Since(start))
+				} else {
+					app.AccessLogger.Println(addr, "{RGZ} ", r.RequestURI, time.Since(start))
+				}
 			}
 		}
 	}
