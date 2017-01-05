@@ -9,7 +9,7 @@ import (
 
 func main() {
 	app := goboots.NewApp()
-	app.AppConfigPath = "config/AppConfig.yaml"
+	app.AppConfigPath = "config/AppConfig.yml"
 	err := app.LoadConfigFile()
 	if err != nil {
 		log.Fatalln("Configuration Error", err)

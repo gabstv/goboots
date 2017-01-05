@@ -360,7 +360,7 @@ func (app *App) LoadConfigFile() error {
 			return err
 		}
 		bytes = bf1.Bytes()
-	} else if xt == ".yaml" {
+	} else if xt == ".yaml" || xt == ".yml" {
 		return yaml.Unmarshal(bytes, app.Config)
 	}
 	return json.Unmarshal(bytes, app.Config)
