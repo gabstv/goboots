@@ -44,6 +44,7 @@ type App struct {
 	Routes        []OldRoute
 	Router        *Router
 	Filters       []Filter
+	StaticFilters []Filter
 	ByteCaches    *ByteCacheCollection
 	GenericCaches *GenericCacheCollection
 	Random        *rand.Rand
@@ -635,6 +636,41 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) int {
 		app.DoHTTPError(w, r, 404)
 		return 404
 	}
+
+	// run all static filters
+	if app.StaticFilters != nil {
+
+		urlbits := strings.Split(niceurl, "/")[1:]
+		//
+		var inObj *In
+		ul := GetUserLang(w, r)
+		inObj = &In{
+			r,
+			w,
+			nil,
+			urlbits,
+			nil,
+			nil,
+			&InContent{},
+			&InContent{},
+			app,
+			nil,
+			ul,
+			i18ngo.TL(ul, app.Config.GlobalPageTitle),
+			make([]io.Closer, 0),
+			&InBodyWrapper{r},
+			"servePublicFolder",
+			"",
+			false,
+		}
+
+		for _, filter := range app.StaticFilters {
+			if ok := filter(inObj); !ok {
+				return 200
+			}
+		}
+	}
+
 	if info.IsDir() {
 		// resolve static index files
 		if app.Config.StaticIndexFiles != nil {

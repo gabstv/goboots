@@ -1,3 +1,7 @@
+### 0.8.0
+- Static content filters
+- No cache filter
+
 ### 0.7.1
 - Separated access log
 

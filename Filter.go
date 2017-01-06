@@ -46,3 +46,11 @@ func ServedByProxyFilter(in *In) bool {
 	}
 	return true
 }
+
+func NoCacheFilter(in *In) bool {
+	hh := in.W.Header()
+	hh.Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	hh.Set("Pragma", "no-cache")
+	hh.Set("Expires", "0")
+	return true
+}
