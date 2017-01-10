@@ -164,6 +164,12 @@ func (c *InContent) Set(key string, val interface{}) *InContent {
 	return c
 }
 
+func (c *InContent) Del(key string) *InContent {
+	c.init()
+	delete(c.vals, key)
+	return c
+}
+
 func (c *InContent) All() map[string]interface{} {
 	c.init()
 	return c.vals

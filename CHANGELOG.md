@@ -1,3 +1,6 @@
+### 0.8.1
+- InContent.Del(key)
+
 ### 0.8.0
 - Static content filters
 - No cache filter
