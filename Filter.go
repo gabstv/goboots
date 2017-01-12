@@ -41,7 +41,9 @@ func CompressFilter(in *In) bool {
 }
 
 func ServedByProxyFilter(in *In) bool {
-	if v := in.R.Header.Get("X-Forwarded-For"); v != "" {
+	if v := in.R.Header.Get("X-Real-IP"); v != "" {
+		in.R.RemoteAddr = v
+	} else if v := in.R.Header.Get("X-Forwarded-For"); v != "" {
 		in.R.RemoteAddr = v
 	}
 	return true
