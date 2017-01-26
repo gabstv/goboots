@@ -278,11 +278,19 @@ func (a *App) GetLocalizedViewTemplate(localpath string, w http.ResponseWriter, 
 }
 
 func (a *App) GetLayout(name string) *template.Template {
-	return a.GetViewTemplate(StrConcat("layouts/", name, ".tpl"))
+	ext := filepath.Ext(name)
+	if len(ext) < 1 {
+		ext = ".tpl"
+	}
+	return a.GetViewTemplate(StrConcat("layouts/", name, ext))
 }
 
 func (a *App) GetLocalizedLayout(name string, w http.ResponseWriter, r *http.Request) *template.Template {
-	return a.GetLocalizedViewTemplate("layouts/"+name+".tpl", w, r)
+	ext := filepath.Ext(name)
+	if len(ext) < 1 {
+		ext = ".tpl"
+	}
+	return a.GetLocalizedViewTemplate("layouts/"+name+ext, w, r)
 }
 
 func (a *App) DoHTTPError(w http.ResponseWriter, r *http.Request, err int) {
