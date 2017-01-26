@@ -281,6 +281,8 @@ func (a *App) GetLayout(name string) *template.Template {
 	ext := filepath.Ext(name)
 	if len(ext) < 1 {
 		ext = ".tpl"
+	} else {
+		name = name[:(len(name) - len(ext))]
 	}
 	return a.GetViewTemplate(StrConcat("layouts/", name, ext))
 }
@@ -289,6 +291,8 @@ func (a *App) GetLocalizedLayout(name string, w http.ResponseWriter, r *http.Req
 	ext := filepath.Ext(name)
 	if len(ext) < 1 {
 		ext = ".tpl"
+	} else {
+		name = name[:(len(name) - len(ext))]
 	}
 	return a.GetLocalizedViewTemplate("layouts/"+name+ext, w, r)
 }
