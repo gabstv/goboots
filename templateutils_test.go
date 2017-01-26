@@ -21,7 +21,8 @@ func TestPartialTemplateGet(t *testing.T) {
 	//}
 	ioutil.WriteFile(path.Join(wd0, "/view/t1.tpl"), []byte(`{{partial /t2.tpl}} WORLD!`), 0777)
 	ioutil.WriteFile(path.Join(wd0, "/view/t2.tpl"), []byte(`HELLO,`), 0777)
-	final, err := parseTemplateIncludeDeps(wd0, "view", path.Join(wd0, "/view/"), []byte(`{{partial ../view/t1.tpl}}`))
+	pp := &defaultTemplateProcessor{}
+	final, err := parseTemplateIncludeDeps(pp, wd0, "view", path.Join(wd0, "/view/"), []byte(`{{partial ../view/t1.tpl}}`))
 	if err != nil {
 		t.Fatal(err)
 	}

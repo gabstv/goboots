@@ -1,3 +1,6 @@
+### 0.9.0
+- Jade/Pug template support
+
 ### 0.8.1
 - InContent.Del(key)
 

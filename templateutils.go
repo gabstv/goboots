@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"io/ioutil"
 	"path"
 	"strings"
 )
@@ -15,10 +14,10 @@ import (
 
 //
 func (a *App) parseTemplateIncludeDeps(lwd string, template []byte) ([]byte, error) {
-	return parseTemplateIncludeDeps(a.basePath, a.Config.ViewsFolderPath, lwd, template)
+	return parseTemplateIncludeDeps(a.TemplateProcessor, a.basePath, a.Config.ViewsFolderPath, lwd, template)
 }
 
-func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []byte) ([]byte, error) {
+func parseTemplateIncludeDeps(templateProcessor TemplateProcessor, basePath, viewsFolderPath, lwd string, template []byte) ([]byte, error) {
 	fb := new(bytes.Buffer)
 	wb := new(bytes.Buffer)
 	stackb := new(bytes.Buffer)
@@ -71,17 +70,18 @@ func parseTemplateIncludeDeps(basePath, viewsFolderPath, lwd string, template []
 						} else {
 							lpath = path.Join(lwd, lpath)
 						}
+						//TODO: move this to the template processor
 						//TODO: test if this really prevents off
 						if !strings.HasPrefix(lpath, basePath) && !strings.HasPrefix(lpath, viewsFolderPath) {
 							return nil, errors.New("partial template path `" + lpath + "` outside of app path `" + basePath + "`!")
 						}
 						// get raw template
-						childbits, err := ioutil.ReadFile(lpath)
+						childbits, err := templateProcessor.ReadFile(lpath)
 						if err != nil {
 							return nil, errors.New("partial template error (io): " + err.Error())
 						}
 						childp, _ := path.Split(lpath)
-						childbits, err = parseTemplateIncludeDeps(basePath, viewsFolderPath, childp, childbits)
+						childbits, err = parseTemplateIncludeDeps(templateProcessor, basePath, viewsFolderPath, childp, childbits)
 						if err != nil {
 							return nil, errors.New("partial template error: " + err.Error())
 						}

@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -68,7 +70,14 @@ func TestApp(t *testing.T) {
 
 	t.Log("TESTING APP\n")
 
-	go app.Listen()
+	go func() {
+		err90 := app.Listen()
+		if err90 != nil {
+			t.Log("error listening", err90)
+		}
+	}()
+
+	time.Sleep(time.Second * 10)
 
 	resp, err := http.Get("http://localhost:8001/")
 	if err != nil {
@@ -196,4 +205,59 @@ func (m *testDBSession) Cleanup(minTime time.Time) {
 
 func (m *testDBSession) Close() {
 
+}
+
+type testTemplateProcessor struct {
+}
+
+func (t *testTemplateProcessor) Walk(root string, walkFn filepath.WalkFunc) error {
+	log.Println("testTemplateProcessor Walk", root)
+	walkFn("test.pug", NewMockFileInfo("test.pug", 1000, os.ModeDevice, time.Now(), false), nil)
+	return nil
+}
+func (t *testTemplateProcessor) ReadFile(filename string) ([]byte, error) {
+	if filename == "test.pug" {
+		out := `doctype 5:
+html:
+  body:
+    p Hello world!`
+		return []byte(out), nil
+	}
+	return nil, errors.New("file not found")
+}
+
+func TestTemplateProcessor(t *testing.T) {
+	RegisterSessionStorageDriver("sessmemory", &testDBSession{})
+	app := NewApp()
+	app.TemplateProcessor = &testTemplateProcessor{}
+	app.Config = &AppConfig{
+		Name:            "Test App",
+		HostAddr:        ":8001",
+		GlobalPageTitle: "Test App - ",
+		OldRouteMethod:  true,
+	}
+	err := app.loadTemplates()
+	if err != nil {
+		t.Fatalf("TestTemplateProcessor ERROR %v\n", err.Error())
+	}
+	tppll := app.GetViewTemplate("test.pug")
+	if tppll == nil {
+		t.Fatalf("app.GetViewTemplate('%v') is nil\n", "test.pug")
+	}
+	rw := &MockResponseWriter{}
+	err = tppll.Execute(rw, nil)
+	if err != nil {
+		t.Fatalf("TestTemplateProcessor ERROR 2 %v\n", err.Error())
+	}
+	str0 := string(rw.Body())
+	str1 := `
+<!DOCTYPE html>
+<html>
+    <body>
+        <p>Hello world!</p>
+    </body>
+</html>`
+	if str0 != str1 {
+		t.Fatalf("Template is \n'%v'\nshould be:\n'%v'\n", str0, str1)
+	}
 }

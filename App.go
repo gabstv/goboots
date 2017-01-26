@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Joker/jade"
 	"github.com/gabstv/dson2json"
 	"github.com/gabstv/i18ngo"
 	"github.com/gorilla/websocket"
@@ -50,18 +51,19 @@ type App struct {
 	Random        *rand.Rand
 	HTTPErrorFunc func(w http.ResponseWriter, r *http.Request, err int)
 	// private
-	controllerMap   map[string]IController
-	templateMap     map[string]*templateInfo
-	templateFuncMap template.FuncMap
-	basePath        string
-	entryHTTP       *appHTTP
-	entryHTTPS      *appHTTPS
-	didRunRoutines  bool
-	mainChan        chan error
-	loadedAll       bool
-	Monitor         appMonitor
-	Logger          Logger
-	AccessLogger    Logger
+	controllerMap     map[string]IController
+	templateMap       map[string]*templateInfo
+	templateFuncMap   template.FuncMap
+	basePath          string
+	entryHTTP         *appHTTP
+	entryHTTPS        *appHTTPS
+	didRunRoutines    bool
+	mainChan          chan error
+	loadedAll         bool
+	Monitor           appMonitor
+	Logger            Logger
+	AccessLogger      Logger
+	TemplateProcessor TemplateProcessor
 	//
 	globalLoadOnce sync.Once
 }
@@ -71,6 +73,7 @@ func NewApp() *App {
 	app.Logger = DefaultLogger()
 	app.Monitor = newMonitor(app)
 	app.Config = &AppConfig{}
+	app.TemplateProcessor = &defaultTemplateProcessor{}
 	return app
 }
 
@@ -259,9 +262,10 @@ func (a *App) GetViewTemplate(localpath string) *template.Template {
 	if len(a.Config.LocalePath) > 0 {
 		localpath = localpath + "_" + i18ngo.GetDefaultLanguageCode()
 	}
-	if tpl, ok := a.templateMap[a.Config.ViewsFolderPath+"/"+localpath]; ok {
+	if tpl, ok := a.templateMap[filepath.Join(a.Config.ViewsFolderPath, localpath)]; ok {
 		return tpl.data
 	}
+	a.Logger.Printf("GetViewTemplate('%v') '%v' not found!\n", localpath, filepath.Join(a.Config.ViewsFolderPath, localpath))
 	return nil
 }
 
@@ -457,7 +461,7 @@ func (app *App) loadConfig() error {
 	}
 	// set default views extension if none
 	if len(app.Config.ViewsExtensions) < 1 {
-		app.Config.ViewsExtensions = []string{".tpl", ".html"}
+		app.Config.ViewsExtensions = []string{".tpl", ".html", ".jade", ".pug"}
 	}
 
 	// parse Config
@@ -554,10 +558,22 @@ func (a *App) loadTemplates() error {
 	if a.templateFuncMap == nil {
 		a.templateFuncMap = make(template.FuncMap)
 	}
+	if a.TemplateProcessor == nil {
+		if a.Logger != nil {
+			a.Logger.Println("loadTemplates() TemplateProcessor was nil")
+		}
+		a.TemplateProcessor = &defaultTemplateProcessor{}
+	}
+	//
+	// set default views extension if none
+	if len(a.Config.ViewsExtensions) < 1 {
+		a.Config.ViewsExtensions = []string{".tpl", ".html", ".jade", ".pug"}
+	}
+	//
 	a.Logger.Println("loading template files (" + strings.Join(a.Config.ViewsExtensions, ",") + ")")
 	if len(a.Config.ViewsFolderPath) == 0 {
 		a.Logger.Println("ViewsFolderPath is empty")
-		return nil
+		//return nil
 	}
 	a.templateMap = make(map[string]*templateInfo, 0)
 	fdir := FormatPath(a.Config.ViewsFolderPath)
@@ -572,19 +588,27 @@ func (a *App) loadTemplates() error {
 			}
 		}
 		if extensionIsValid {
-			bytes, err := ioutil.ReadFile(path)
+			bytes, err := a.TemplateProcessor.ReadFile(path)
 			if err != nil {
-				return errors.New("loadTemplates ioutil.ReadFile " + path + " " + err.Error())
+				return errors.New("loadTemplates TemplateProcessor.ReadFile " + path + " " + err.Error())
 			}
 			ldir, _ := filepath.Split(path)
 			bytes, err = a.parseTemplateIncludeDeps(ldir, bytes)
 			if err != nil {
-				return errors.New("loadTemplates ioutil.ReadFile " + path + " a.parseTemplateIncludeDeps " + err.Error())
+				return errors.New("loadTemplates TemplateProcessor.ReadFile " + path + " a.parseTemplateIncludeDeps " + err.Error())
 			}
 			if len(a.Config.LocalePath) < 1 {
 				tplInfo := &templateInfo{
 					path:       path,
 					lastUpdate: time.Now(),
+				}
+				if ext == ".pug" || ext == ".jade" {
+					// it's a jade
+					jadef, err := jade.Parse(path, string(bytes))
+					if err != nil {
+						return errors.New("error parsing pug template file " + path + ": " + err.Error())
+					}
+					bytes = []byte(jadef)
 				}
 				templ := template.New(path).Funcs(a.templateFuncMap)
 				templ, err := templ.Parse(string(bytes))
@@ -602,6 +626,14 @@ func (a *App) loadTemplates() error {
 					}
 					locPName := path + "_" + lcv
 					templ := template.New(locPName)
+					if ext == ".pug" || ext == ".jade" {
+						// it's a jade
+						jadef, err := jade.Parse(locPName, string(bytes))
+						if err != nil {
+							return errors.New("error parsing pug template file " + locPName + ": " + err.Error())
+						}
+						bytes = []byte(jadef)
+					}
 					templ, err := templ.Parse(LocalizeTemplate(string(bytes), lcv))
 					if err != nil {
 						return errors.New("loadTemplates " + locPName + " templ.Parse LocalizeTemplate " + err.Error())
@@ -614,9 +646,12 @@ func (a *App) loadTemplates() error {
 		}
 		return nil
 	}
-	err := filepath.Walk(fdir, vPath)
+	err := a.TemplateProcessor.Walk(fdir, vPath)
 	if err != nil {
-		return errors.New("loadTemplates filepath.Walk " + fdir + " " + err.Error())
+		return errors.New("loadTemplates TemplateProcessor.Walk " + fdir + " " + err.Error())
+	}
+	for k, _ := range a.templateMap {
+		a.Logger.Println("loaded", k)
 	}
 	a.Logger.Printf("%d templates loaded (%d bytes)\n", len(a.templateMap), bytesLoaded)
 	return nil
