@@ -8,5 +8,6 @@
   TLSKeyPath: "config/key.pem"
   RoutesConfigPath: "config/Routes.cfg"
   ViewsFolderPath: "view"
+  WatchViewsFolder: true
   PublicFolderPath: "public"
   GlobalPageTitle: "Basic Server Example : "

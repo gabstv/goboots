@@ -12,6 +12,7 @@ import (
 	"github.com/gabstv/i18ngo"
 	"github.com/gorilla/websocket"
 	"golang.org/x/crypto/acme/autocert"
+	"gopkg.in/fsnotify.v1"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -587,11 +588,29 @@ func (a *App) loadTemplates() error {
 		a.Logger.Println("ViewsFolderPath is empty")
 		//return nil
 	}
+	//
+	var fswatcher *fsnotify.Watcher
+	var fserr error
+	//
+	if a.Config.WatchViewsFolder {
+		fswatcher, fserr = fsnotify.NewWatcher()
+		if fserr != nil {
+			a.Logger.Printf("fsnotify error: %v\n", fserr.Error())
+		}
+	}
+	//
 	a.templateMap = make(map[string]*templateInfo, 0)
 	fdir := FormatPath(a.Config.ViewsFolderPath)
 	bytesLoaded := int(0)
 	langs := i18ngo.GetLanguageCodes()
 	vPath := func(path string, f os.FileInfo, err error) error {
+		if f.IsDir() {
+			if fswatcher != nil {
+				fswatcher.Add(path)
+				a.Logger.Println("FSWATCH (dir)", path)
+			}
+			return nil
+		}
 		ext := filepath.Ext(path)
 		extensionIsValid := false
 		for _, v := range a.Config.ViewsExtensions {
@@ -600,6 +619,10 @@ func (a *App) loadTemplates() error {
 			}
 		}
 		if extensionIsValid {
+			if fswatcher != nil {
+				fswatcher.Add(path)
+				a.Logger.Println("FSWATCH (file)", path)
+			}
 			bytes, err := a.TemplateProcessor.ReadFile(path)
 			if err != nil {
 				return errors.New("loadTemplates TemplateProcessor.ReadFile " + path + " " + err.Error())
@@ -665,7 +688,84 @@ func (a *App) loadTemplates() error {
 	for k, _ := range a.templateMap {
 		a.Logger.Println("loaded", k)
 	}
+	if fswatcher != nil {
+		go func() {
+			defer fswatcher.Close()
+			for {
+				select {
+				case evt := <-fswatcher.Events:
+					path := evt.Name
+					if evt.Op == fsnotify.Create || evt.Op == fsnotify.Write {
+						ext := filepath.Ext(path)
+						for _, v := range a.Config.ViewsExtensions {
+							if v == ext {
+								//
+								bytes, err := a.TemplateProcessor.ReadFile(path)
+								if err != nil {
+									a.Logger.Println("FSWATCH loadTemplates TemplateProcessor.ReadFile ", path, err.Error())
+									break
+								}
+								if len(a.Config.LocalePath) < 1 {
+									tplInfo := &templateInfo{
+										path:       path,
+										lastUpdate: time.Now(),
+									}
+									if ext == ".pug" || ext == ".jade" {
+										// it's a jade
+										jadef, err := jade.Parse(path, string(bytes))
+										if err != nil {
+											a.Logger.Println("FSWATCH error parsing pug template file", path, err.Error())
+											break
+										}
+										bytes = []byte(jadef)
+									}
+									templ := template.New(path).Funcs(a.templateFuncMap)
+									templ, err := templ.Parse(string(bytes))
+									if err != nil {
+										a.Logger.Println("FSWATCH loadTemplates template.New", path, "templ.Parse", err.Error())
+										break
+									}
+									tplInfo.data = templ
+									a.templateMap[path] = tplInfo
+								} else {
+									for _, lcv := range langs {
+										tplInfo := &templateInfo{
+											path:       path,
+											lastUpdate: time.Now(),
+										}
+										locPName := path + "_" + lcv
+										templ := template.New(locPName)
+										if ext == ".pug" || ext == ".jade" {
+											// it's a jade
+											jadef, err := jade.Parse(locPName, string(bytes))
+											if err != nil {
+												a.Logger.Println("FSWATCH error parsing pug template file", locPName, ":", err.Error())
+												break
+											}
+											bytes = []byte(jadef)
+										}
+										templ, err := templ.Parse(LocalizeTemplate(string(bytes), lcv))
+										if err != nil {
+											a.Logger.Println("FSWATCH loadTemplates", locPName, "templ.Parse LocalizeTemplate", err.Error())
+											break
+										}
+										tplInfo.data = templ
+										a.templateMap[locPName] = tplInfo
+									}
+								}
+								//
+								break
+							}
+						}
+					} else if evt.Op == fsnotify.Remove {
+						//TODO: remove template
+					}
+				}
+			}
+		}()
+	}
 	a.Logger.Printf("%d templates loaded (%d bytes)\n", len(a.templateMap), bytesLoaded)
+
 	return nil
 }
 

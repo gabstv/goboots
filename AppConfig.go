@@ -46,6 +46,8 @@ type AppConfig struct {
 	ViewsExtensions  []string `yaml:"ViewsExtensions"` // .html, .tpl
 	PublicFolderPath string   `yaml:"PublicFolderPath"`
 
+	WatchViewsFolder bool `yaml:"WatchViewsFolder"`
+
 	StaticAccessLog  bool
 	DynamicAccessLog bool
 	Verbose          bool

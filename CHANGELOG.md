@@ -1,3 +1,5 @@
+### 0.9.3
+- Watch and reload views automatically (experimental)
 ### 0.9.2
 - .donotwatch file (.gitignore format)
 ### 0.9.0

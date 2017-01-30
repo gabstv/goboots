@@ -132,7 +132,9 @@ func runApp(args []string) {
 	var cm *exec.Cmd
 	start := func() {
 		os.Remove("_goboots_main_")
+		gp := os.Getenv("GOPATH")
 		cmbuild := exec.Command("go", "build", "-o", "_goboots_main_", defaultgofile)
+		cmbuild.Env = []string{"GOPATH=" + gp}
 		cmbuild.Stderr = os.Stderr
 		cmbuild.Stdout = os.Stdout
 		// run prebuild if any
@@ -146,6 +148,8 @@ func runApp(args []string) {
 		//
 		if err := cmbuild.Start(); err != nil {
 			print("Could not build the app: " + err.Error() + "\n")
+			wwwddd, _ := os.Getwd()
+			print(wwwddd + "\n")
 			cm = nil
 		} else {
 			err := cmbuild.Wait()
