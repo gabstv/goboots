@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/monochromegane/go-gitignore"
 	"gopkg.in/fsnotify.v1"
 	"os"
 	"os/exec"
@@ -58,6 +59,46 @@ func runApp(args []string) {
 	defer w.Close()
 	wd, _ := os.Getwd()
 	w.Add(wd)
+	// get ignores!
+	donotwatch := make([]func(path string, isDir bool) bool, 0)
+	ignoresLoop := func(p string, i os.FileInfo, er error) error {
+		if er != nil {
+			return nil
+		}
+		if i.IsDir() {
+			if strings.Contains(p, "/.") {
+				return filepath.SkipDir
+			}
+			if strings.Contains(p, "/_") {
+				return filepath.SkipDir
+			}
+			bdir := dir_remainder(p)
+			if strings.HasPrefix(bdir, ".") {
+				return filepath.SkipDir
+			}
+			// go to children
+			//filepath.Walk(root, walkFn)
+			return nil
+
+		}
+		//
+		_, fn := filepath.Split(p)
+		//print("FN: " + fn + "\n")
+		if fn == ".donotwatch" {
+			// read .donotwatch and add files
+			fff, er9 := os.Open(p)
+			if er9 != nil {
+				print("ERROR READING " + fn + " (" + p + "): " + er9.Error() + "\n")
+				return nil
+			}
+			gig := gitignore.NewGitIgnoreFromReader(p, fff)
+			fff.Close()
+			donotwatch = append(donotwatch, gig.Match)
+			print("donotwatch: " + p + "\n")
+		}
+		return nil
+	}
+	filepath.Walk(wd, ignoresLoop)
 	//TODO: replace walk function
 	filepath.Walk(wd, func(p string, i os.FileInfo, er error) error {
 		if er != nil {
@@ -74,6 +115,13 @@ func runApp(args []string) {
 			if strings.HasPrefix(bdir, ".") {
 				return filepath.SkipDir
 			}
+
+			for _, func0 := range donotwatch {
+				if func0(p, true) {
+					return filepath.SkipDir
+				}
+			}
+
 			w.Add(p)
 			print(p + "\n")
 		} else {

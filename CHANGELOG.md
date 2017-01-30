@@ -1,3 +1,5 @@
+### 0.9.2
+- .donotwatch file (.gitignore format)
 ### 0.9.0
 - Jade/Pug template support
 
