@@ -25,9 +25,10 @@ func (m *MemoryDbSession) GetSession(sid string) (*goboots.Session, error) {
 		return nil, errors.New("not found")
 	}
 
-	if sessfile, ok := m.sessions[sid]; ok {
+	if sessfile := m.sessions[sid]; sessfile != nil {
 		sessfile.Updated = time.Now()
-		sessfile.Flush()
+		// sessfile.Flush() calls PutSession which will be locked by now so we use a goroutine for this!
+		go sessfile.Flush()
 		return sessfile, nil
 	}
 
@@ -38,6 +39,7 @@ func (m *MemoryDbSession) PutSession(session *goboots.Session) error {
 	if session == nil {
 		return errors.New("session is nil")
 	}
+
 	m.sessions_lock.Lock()
 	defer m.sessions_lock.Unlock()
 
@@ -55,12 +57,12 @@ func (m *MemoryDbSession) NewSession(session *goboots.Session) error {
 }
 
 func (m *MemoryDbSession) RemoveSession(session *goboots.Session) error {
+	m.sessions_lock.Lock()
+	defer m.sessions_lock.Unlock()
+
 	if session == nil || m.sessions == nil {
 		return nil
 	}
-
-	m.sessions_lock.Lock()
-	defer m.sessions_lock.Unlock()
 
 	delete(m.sessions, session.SID)
 
@@ -68,6 +70,7 @@ func (m *MemoryDbSession) RemoveSession(session *goboots.Session) error {
 }
 
 func (m *MemoryDbSession) Cleanup(minTime time.Time) {
+	m.app.Logger.Println("MemoryDbSession::Cleanup start")
 	m.sessions_lock.Lock()
 	defer m.sessions_lock.Unlock()
 
@@ -92,5 +95,7 @@ func (m *MemoryDbSession) Close() {
 }
 
 func init() {
-	goboots.RegisterSessionStorageDriver("sessmemory", &MemoryDbSession{})
+	mmm := &MemoryDbSession{}
+	mmm.sessions = make(map[string]*goboots.Session)
+	goboots.RegisterSessionStorageDriver("sessmemory", mmm)
 }
