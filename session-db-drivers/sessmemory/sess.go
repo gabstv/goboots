@@ -3,17 +3,14 @@ package sessmemory
 import (
 	"errors"
 	"github.com/gabstv/goboots"
+	"sync"
 	"time"
 )
 
 type MemoryDbSession struct {
-	gcsid     chan string
-	gcs       chan *goboots.Session
-	scs       chan *goboots.Session
-	rcs       chan *goboots.Session
-	sessions  map[string]*goboots.Session
-	connected bool
-	app       *goboots.App
+	sessions      map[string]*goboots.Session
+	app           *goboots.App
+	sessions_lock sync.RWMutex
 }
 
 func (m *MemoryDbSession) SetApp(app *goboots.App) {
@@ -21,24 +18,35 @@ func (m *MemoryDbSession) SetApp(app *goboots.App) {
 }
 
 func (m *MemoryDbSession) GetSession(sid string) (*goboots.Session, error) {
-	m.connect()
-	m.gcsid <- sid
+	m.sessions_lock.Lock()
+	defer m.sessions_lock.Unlock()
 
-	sess := <-m.gcs
-
-	if sess == nil {
-		return nil, errors.New("Not found.")
+	if m.sessions == nil {
+		return nil, errors.New("not found")
 	}
 
-	sess.Updated = time.Now()
-	sess.Flush()
+	if sessfile, ok := m.sessions[sid]; ok {
+		sessfile.Updated = time.Now()
+		sessfile.Flush()
+		return sessfile, nil
+	}
 
-	return sess, nil
+	return nil, errors.New("not found")
 }
 
 func (m *MemoryDbSession) PutSession(session *goboots.Session) error {
-	m.connect()
-	m.scs <- session
+	if session == nil {
+		return errors.New("session is nil")
+	}
+	m.sessions_lock.Lock()
+	defer m.sessions_lock.Unlock()
+
+	if m.sessions == nil {
+		m.sessions = make(map[string]*goboots.Session)
+	}
+
+	m.sessions[session.SID] = session
+
 	return nil
 }
 
@@ -47,15 +55,22 @@ func (m *MemoryDbSession) NewSession(session *goboots.Session) error {
 }
 
 func (m *MemoryDbSession) RemoveSession(session *goboots.Session) error {
-	if session == nil {
+	if session == nil || m.sessions == nil {
 		return nil
 	}
-	m.connect()
-	m.rcs <- session
+
+	m.sessions_lock.Lock()
+	defer m.sessions_lock.Unlock()
+
+	delete(m.sessions, session.SID)
+
 	return nil
 }
 
 func (m *MemoryDbSession) Cleanup(minTime time.Time) {
+	m.sessions_lock.Lock()
+	defer m.sessions_lock.Unlock()
+
 	if m.sessions == nil {
 		return
 	}
@@ -73,46 +88,7 @@ func (m *MemoryDbSession) Cleanup(minTime time.Time) {
 }
 
 func (m *MemoryDbSession) Close() {
-	m.connected = false
-}
 
-func (m *MemoryDbSession) getSessionWorker() {
-	for m.connected {
-		sid := <-m.gcsid
-		m.gcs <- m.sessions[sid]
-	}
-}
-
-func (m *MemoryDbSession) setSessionWorker() {
-	for m.connected {
-		session := <-m.scs
-		m.sessions[session.SID] = session
-	}
-}
-
-func (m *MemoryDbSession) delSessionWorker() {
-	for m.connected {
-		session := <-m.rcs
-		delete(m.sessions, session.SID)
-	}
-}
-
-func (m *MemoryDbSession) connect() error {
-	if m.connected {
-		return nil
-	}
-
-	m.gcsid = make(chan string)
-	m.gcs = make(chan *goboots.Session)
-	m.scs = make(chan *goboots.Session)
-	m.rcs = make(chan *goboots.Session)
-
-	m.sessions = make(map[string]*goboots.Session, 0)
-	m.connected = true
-	go m.getSessionWorker()
-	go m.setSessionWorker()
-	go m.delSessionWorker()
-	return nil
 }
 
 func init() {
