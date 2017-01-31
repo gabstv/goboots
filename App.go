@@ -755,6 +755,7 @@ func (a *App) loadTemplates() error {
 									}
 									tplInfo.data = templ
 									a.templateMap[path] = tplInfo
+									a.Logger.Println("FSWATCH reloaded template", path)
 								} else {
 									for _, lcv := range langs {
 										tplInfo := &templateInfo{
@@ -779,6 +780,7 @@ func (a *App) loadTemplates() error {
 										}
 										tplInfo.data = templ
 										a.templateMap[locPName] = tplInfo
+										a.Logger.Println("FSWATCH reloaded template", locPName)
 									}
 								}
 								//
