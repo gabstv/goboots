@@ -10,7 +10,7 @@ import (
 type MemoryDbSession struct {
 	sessions      map[string]*goboots.Session
 	app           *goboots.App
-	sessions_lock sync.RWMutex
+	sessions_lock sync.Mutex
 }
 
 func (m *MemoryDbSession) SetApp(app *goboots.App) {
