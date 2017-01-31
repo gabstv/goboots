@@ -223,6 +223,34 @@ func (app *App) listenTLS() {
 		app.mainChan <- er4
 		return
 	}
+	// if the raw cert and key are present, put them in a temp file
+	if len(app.Config.RawTLSCert) > 128 && len(app.Config.RawTLSKey) > 128 {
+		tkeyfile, err := ioutil.TempFile("", "gb_tempkey_")
+		if err != nil {
+			app.mainChan <- err
+			return
+		}
+		app.Config.TLSKeyPath = tkeyfile.Name()
+		tkeyfile.Write([]byte(app.Config.RawTLSKey))
+		tkeyfile.Close()
+		defer func(fn string) {
+			os.Remove(fn)
+		}(app.Config.TLSKeyPath)
+		//
+		tcertfile, err := ioutil.TempFile("", "gb_tempcert_")
+		if err != nil {
+			app.mainChan <- err
+			return
+		}
+		app.Config.TLSCertificatePath = tcertfile.Name()
+		tcertfile.Write([]byte(app.Config.RawTLSCert))
+		tcertfile.Close()
+		defer func(fn string) {
+			os.Remove(fn)
+		}(app.Config.TLSCertificatePath)
+		app.Logger.Println("Temp TLS key at", app.Config.TLSKeyPath)
+		app.Logger.Println("Temp TLS cert at", app.Config.TLSCertificatePath)
+	}
 	if len(app.Config.HostAddrTLS) < 1 || (len(app.Config.TLSCertificatePath) < 1 && len(app.Config.TLSKeyPath) < 1) {
 		//TODO: error if TLS needs to be enforced (add config option)
 		return

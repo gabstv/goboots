@@ -1,3 +1,5 @@
+### 0.9.4
+- get temp cert/key raw strings in config
 ### 0.9.3
 - Watch and reload views automatically (experimental)
 ### 0.9.2

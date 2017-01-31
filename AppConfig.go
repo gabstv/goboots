@@ -37,6 +37,8 @@ type AppConfig struct {
 	TLSRedirectPort      string   `yaml:"TLSRedirectPort"`
 	TLSAutocert          bool     `yaml:"TLSAutocert"`
 	TLSAutocertWhitelist []string `yaml:"TLSAutocertWhitelist"`
+	RawTLSKey            string   `yaml:"RawTLSKey"`
+	RawTLSCert           string   `yaml:"RawTLSCert"`
 
 	// Paths
 	RoutesConfigPath string   `yaml:"RoutesConfigPath"`
