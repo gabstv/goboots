@@ -6,8 +6,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
-	"github.com/gabstv/i18ngo"
-	"github.com/gorilla/websocket"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -16,6 +15,9 @@ import (
 	"os"
 	"reflect"
 	"text/template"
+
+	"github.com/gabstv/i18ngo"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -321,6 +323,14 @@ func (in *In) URLQ() url.Values {
 
 func (in *In) FormVal(key string) string {
 	return in.R.FormValue(key)
+}
+
+func (in *In) SprintFormVals(format string, keys ...string) string {
+	ks := make([]interface{}, len(keys))
+	for k := range keys {
+		ks[k] = in.FormVal(keys[k])
+	}
+	return fmt.Sprintf(format, ks...)
 }
 
 func (in *In) FormFile(key string) (multipart.File, *multipart.FileHeader, error) {
