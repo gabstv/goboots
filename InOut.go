@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"sync"
 	"text/template"
 
 	"github.com/gabstv/i18ngo"
@@ -49,6 +50,8 @@ type In struct {
 	controllerName string
 	methodName     string
 	hijacked       bool
+	defers         []func()
+	mutex_defers   sync.Mutex
 }
 
 // New clones a new In but without the content.
@@ -67,7 +70,17 @@ func (in *In) New() *In {
 	in2.LangCode = in.LangCode
 	in2.GlobalTitle = in.GlobalTitle
 	in2.reqbodyw = in.reqbodyw
+	in2.defers = make([]func(), 0)
 	return in2
+}
+
+func (in *In) Defer(f func()) {
+	in.mutex_defers.Lock()
+	defer in.mutex_defers.Unlock()
+	if in.defers == nil {
+		in.defers = make([]func(), 0)
+	}
+	in.defers = append(in.defers, f)
 }
 
 func (in *In) closeall() {
@@ -206,6 +219,7 @@ func (in *In) OutputLay(layout string) *Out {
 
 func (in *In) outputTpl(tplPath, customLayout string) *Out {
 	o := &Out{}
+	o.defers = in.defers
 	if len(tplPath) > 0 {
 		in.LayoutContent.Set("Content", in.OutputSoloTpl(tplPath).String())
 	}
@@ -242,6 +256,7 @@ func (in *In) outputTpl(tplPath, customLayout string) *Out {
 
 func (in *In) OutputSoloTpl(tplPath string) *Out {
 	o := &Out{}
+	o.defers = in.defers
 	o.kind = outTemplateSolo
 	if in.R != nil && in.W != nil {
 		o.contentObj = in.Content.Set("Flash", in.Session().Flash.All()).All()
@@ -260,6 +275,7 @@ func (in *In) OutputSoloTpl(tplPath string) *Out {
 
 func (in *In) OutputJSON(jobj interface{}) *Out {
 	o := &Out{}
+	o.defers = in.defers
 	o.kind = outJSON
 	o.contentObj = jobj
 	return o
@@ -267,6 +283,7 @@ func (in *In) OutputJSON(jobj interface{}) *Out {
 
 func (in *In) OutputXML(xobj interface{}) *Out {
 	o := &Out{}
+	o.defers = in.defers
 	o.kind = outXML
 	o.contentObj = xobj
 	return o
@@ -274,6 +291,7 @@ func (in *In) OutputXML(xobj interface{}) *Out {
 
 func (in *In) OutputString(str string) *Out {
 	o := &Out{}
+	o.defers = in.defers
 	o.kind = outString
 	o.contentStr = str
 	return o
@@ -281,6 +299,7 @@ func (in *In) OutputString(str string) *Out {
 
 func (in *In) OutputBytes(b []byte) *Out {
 	o := &Out{}
+	o.defers = in.defers
 	o.kind = outBytes
 	o.contentBytes = b
 	return o
@@ -288,6 +307,7 @@ func (in *In) OutputBytes(b []byte) *Out {
 
 func (in *In) OutputFile(name string) *Out {
 	o := &Out{}
+	o.defers = in.defers
 	o.kind = outFile
 	o.contentStr = name
 	return o
@@ -367,6 +387,7 @@ type Out struct {
 	contentStr   string
 	contentBytes []byte
 	tpl          *template.Template
+	defers       []func()
 }
 
 func (o *Out) IsContinue() bool {
@@ -382,6 +403,11 @@ func (o *Out) mustb(b []byte, err error) []byte {
 }
 
 func (o *Out) Render(w http.ResponseWriter) {
+	if o.defers != nil {
+		for k := range o.defers {
+			o.defers[k]()
+		}
+	}
 	switch o.kind {
 	case outJSON:
 		defer func() {

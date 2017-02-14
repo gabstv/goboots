@@ -1,3 +1,5 @@
+### 0.9.5
+- in.Defer(func())
 ### 0.9.4
 - get temp cert/key raw strings in config
 ### 0.9.3

@@ -839,6 +839,8 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) int {
 			"servePublicFolder",
 			"",
 			false,
+			nil,
+			sync.Mutex{},
 		}
 
 		for _, filter := range app.StaticFilters {
@@ -925,6 +927,8 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 		v.Controller,
 		v.Method,
 		false,
+		nil,
+		sync.Mutex{},
 	}
 
 	upgrade := r.Header.Get("Upgrade")
@@ -1012,6 +1016,8 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				match.ControllerName,
 				match.MethodName,
 				false,
+				nil,
+				sync.Mutex{},
 			}
 
 			if upgrade == "websocket" || upgrade == "Websocket" {
