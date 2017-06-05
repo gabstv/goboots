@@ -18,7 +18,7 @@ func listenAndServeTLS(addr, certFile, keyFile string, handler http.Handler) err
 }
 
 func listenAndServeGracefully(addr string, handler http.Handler) error {
-	return endless.ListenAndServe(addr, handler)
+	return http.ListenAndServe(addr, handler)
 }
 
 func listenAndServeTLSGracefully(addr, certFile, keyFile string, handler http.Handler) error {
