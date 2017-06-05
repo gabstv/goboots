@@ -57,6 +57,9 @@ type AppConfig struct {
 	GZipStatic       bool
 
 	StaticIndexFiles []string `yaml:"StaticIndexFiles"`
+
+	//Gracefully restarts if enabled
+	GracefulRestart bool
 }
 
 func (a *AppConfig) ParseEnv() {

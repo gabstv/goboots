@@ -1,3 +1,5 @@
+### 0.9.6
+- Graceful restarts using [endless](https://github.com/gabstv/endless) (opt-in)
 ### 0.9.5
 - in.Defer(func())
 ### 0.9.4
