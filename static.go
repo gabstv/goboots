@@ -52,7 +52,7 @@ func (app *App) serveFile(w http.ResponseWriter, r *http.Request, fs http.FileSy
 
 	f, err := fs.Open(name)
 	if err != nil {
-		msg, code := toHTTPError(err)
+		msg, code := toHTTPError(err, app.Logger)
 		http.Error(w, msg, code)
 		return code
 	}
@@ -140,12 +140,16 @@ func localRedirect(w http.ResponseWriter, r *http.Request, newPath string) {
 // actually return err.Error(), since msg and httpStatus are returned to users,
 // and historically Go's ServeContent always returned just "404 Not Found" for
 // all errors. We don't want to start leaking information in error messages.
-func toHTTPError(err error) (msg string, httpStatus int) {
+func toHTTPError(err error, loggers ...Logger) (msg string, httpStatus int) {
+
 	if os.IsNotExist(err) {
 		return "404 page not found", http.StatusNotFound
 	}
 	if os.IsPermission(err) {
 		return "403 Forbidden", http.StatusForbidden
+	}
+	for _, v := range loggers {
+		v.Println("FATAL 500", err.Error())
 	}
 	// Default:
 	return "500 Internal Server Error", http.StatusInternalServerError
