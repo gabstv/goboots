@@ -871,8 +871,7 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) int {
 		return 403
 	}
 	//
-	http.ServeFile(w, r, fdir)
-	return 200
+	return app.ServeFile(w, r, fdir)
 }
 
 func (a *App) oldRouteMatch(niceurl string) *OldRoute {
