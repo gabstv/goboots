@@ -856,7 +856,7 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) int {
 		}
 	}
 
-	if info.IsDir() {
+	if info != nil && info.IsDir() {
 		// resolve static index files
 		if app.Config.StaticIndexFiles != nil {
 			for _, v := range app.Config.StaticIndexFiles {
