@@ -90,7 +90,7 @@ func (w *dbwrapper) db() (*sqlx.DB, error) {
 	// check if table exists!
 	var one int
 	err = w.dbi.QueryRowx("SELECT 1 FROM goboots_sessid LIMIT 1").Scan(&one)
-	if err != nil {
+	if err != nil && err.Error() != "sql: no rows in result set" {
 		// table doesn't exist!
 		w.app.Logger.Println(err.Error())
 		// try to create table
