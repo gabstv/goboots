@@ -1,3 +1,5 @@
+### 0.9.7
+- Improved Mysql sessions
 ### 0.9.6
 - Graceful restarts using [endless](https://github.com/gabstv/endless) (opt-in)
 ### 0.9.5

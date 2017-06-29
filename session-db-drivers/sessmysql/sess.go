@@ -7,137 +7,218 @@ import (
 	"github.com/gabstv/goboots/session-db-drivers/sessmysql/files"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"sync"
 	"time"
 )
 
+/*
+type ISessionDBEngine interface {
+	SetApp(app *App)
+	GetSession(sid string) (*Session, error)
+	PutSession(session *Session) error
+	NewSession(session *Session) error
+	RemoveSession(session *Session) error
+	Cleanup(minTime time.Time)
+	Close()
+}
+*/
+
 type MysqlDBSession struct {
-	mdb *sqlx.DB
+	w   *dbwrapper
 	app *goboots.App
+}
+
+type dbwrapper struct {
+	dbi      *sqlx.DB
+	app      *goboots.App
+	lastPing time.Time
+	mutex    sync.Mutex
+}
+
+func newWrapper(app *goboots.App) *dbwrapper {
+	w := &dbwrapper{}
+	w.app = app
+	return w
+}
+
+func (w *dbwrapper) db() (*sqlx.DB, error) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+	if w.dbi != nil {
+		if w.lastPing.IsZero() || w.lastPing.Add(time.Minute*5).Before(time.Now()) {
+			// ping
+			err := w.dbi.Ping()
+			if err != nil {
+				w.app.Logger.Println("MysqlDBSession ping error:", err.Error(), "; reconnecting...")
+				w.dbi.Close()
+			} else {
+				w.lastPing = time.Now()
+				return w.dbi, nil
+			}
+		} else {
+			return w.dbi, nil
+		}
+	}
+	///////////
+	var connstr, sdb, un, pw string
+	var err error
+	str, ok := w.app.Config.SessionDb.(string)
+	if ok {
+		connstr = w.app.Config.Databases[str].Host
+		sdb = w.app.Config.Databases[str].Database
+		un = w.app.Config.Databases[str].User
+		pw = w.app.Config.Databases[str].Password
+	} else {
+		mmap := w.app.Config.SessionDb.(map[string]string)
+		connstr = mmap["Host"]
+		sdb = mmap["Database"]
+		un = mmap["User"]
+		pw = mmap["Password"]
+	}
+	dsn := fmt.Sprintf("%v:%v@tcp(%v)/%v", un, pw, connstr, sdb)
+	w.dbi, err = sqlx.Open("mysql", dsn+"?parseTime=true")
+	if err != nil {
+		return nil, err
+	}
+	w.dbi.SetConnMaxLifetime(0)
+	// check if table exists!
+	var one int
+	err = w.dbi.QueryRowx("SELECT 1 FROM goboots_sessid LIMIT 1").Scan(&one)
+	if err != nil {
+		// table doesn't exist!
+		// try to create table
+		sqlb, err := files.RawCreateSqlBytes()
+		if err != nil {
+			return nil, err
+		}
+		_, err = w.dbi.Exec(string(sqlb))
+		if err != nil {
+			w.app.Logger.Println("MysqlDBSession::Create COULD NOT CREATE SESSION TABLE goboots_sessid:", err.Error(), "; Please create the table manually (file: https://github.com/gabstv/goboots/blob/master/session-db-drivers/sessmysql/raw/create.sql)")
+			return nil, err
+		}
+	}
+
+	return w.dbi, nil
+}
+
+func (w *dbwrapper) close() {
+	if w.dbi == nil {
+		return
+	}
+	w.dbi.Close()
+	w.dbi = nil
 }
 
 func (m *MysqlDBSession) SetApp(app *goboots.App) {
 	m.app = app
+	m.w = newWrapper(app)
 }
 
 func (m *MysqlDBSession) GetSession(sid string) (*goboots.Session, error) {
-	if m.mdb == nil {
-		if er2 := m.connect(); er2 != nil {
-			return nil, er2
-		}
-	}
-	msession := &goboots.Session{}
-	var stime time.Time
-	var updated time.Time
-	//var expires time.Time
-	var data string
-	//
-	qrx := m.mdb.QueryRowx("SELECT time AS stime, updated, data FROM goboots_sessid WHERE sid=?", sid)
-
-	err := qrx.Scan(&stime, &updated, &data)
+	db, err := m.w.db()
 	if err != nil {
 		return nil, err
 	}
-	msession.SID = sid
-	msession.Time = stime
-	msession.Updated = updated
-	msession.Data = umshl(data)
-	msession.Flush()
-	return msession, nil
+	var stime time.Time
+	var updated time.Time
+	data := make([]byte, 0)
+	var shortexpires time.Time
+	var shortcount uint8
+
+	err = db.QueryRowx("SELECT time, updated, data, shortexpires, shortcount FROM goboots_sessid WHERE sid=?", sid).Scan(&stime, &updated, &data, &shortexpires, &shortcount)
+	if err != nil {
+		return nil, err
+	}
+
+	switch shortcount {
+	case 0:
+		db.Exec("UPDATE goboots_sessid SET shortcount=1, shortexpires = DATE_ADD(NOW(), INTERVAL 30 MINUTE) WHERE sid=?", sid)
+	case 1:
+		db.Exec("UPDATE goboots_sessid SET shortcount=2, shortexpires = DATE_ADD(NOW(), INTERVAL 5 HOUR) WHERE sid=?", sid)
+	case 2:
+		db.Exec("UPDATE goboots_sessid SET shortcount=3, shortexpires = DATE_ADD(NOW(), INTERVAL 5 DAY) WHERE sid=?", sid)
+	case 3:
+		db.Exec("UPDATE goboots_sessid SET shortcount=4, shortexpires = DATE_ADD(NOW(), INTERVAL 5 MONTH) WHERE sid=?", sid)
+	}
+
+	ses := &goboots.Session{}
+	ses.SID = sid
+	ses.Time = stime
+	ses.Updated = updated
+	ses.Data = umshl(data)
+	ses.Flush()
+	return ses, nil
 }
 
 func (m *MysqlDBSession) PutSession(session *goboots.Session) error {
-	if m.mdb == nil {
-		if er2 := m.connect(); er2 != nil {
-			return er2
-		}
+	db, err := m.w.db()
+	if err != nil {
+		return err
 	}
-	_, err := m.mdb.Exec("UPDATE goboots_sessid SET updated=NOW(), expires=?, data=? WHERE sid=?", session.GetExpires(), mshl(session.Data), session.SID)
+	_, err = db.Exec("UPDATE goboots_sessid SET updated=NOW(), expires=?, data=? WHERE sid=?", session.GetExpires(), mshl(session.Data), session.SID)
 	return err
 }
 
 func (m *MysqlDBSession) NewSession(session *goboots.Session) error {
-	if m.mdb == nil {
-		if er2 := m.connect(); er2 != nil {
-			return er2
-		}
+	db, err := m.w.db()
+	if err != nil {
+		return err
 	}
-	_, err := m.mdb.Exec("INSERT INTO goboots_sessid SET sid=?, updated=NOW(), time=NOW(), expires=?, data=?", session.SID, session.GetExpires(), mshl(session.Data))
+	_, err = db.Exec("INSERT INTO goboots_sessid SET sid=?, updated=NOW(), time=NOW(), expires=?, data=?, shortexpires = DATE_ADD(NOW(), INTERVAL 10 MINUTE), shortcount=0", session.SID, session.GetExpires(), mshl(session.Data))
 	return err
 }
 
 func (m *MysqlDBSession) RemoveSession(session *goboots.Session) error {
-	if m.mdb == nil {
-		if er2 := m.connect(); er2 != nil {
-			return er2
-		}
+	db, err := m.w.db()
+	if err != nil {
+		return err
 	}
-	_, err := m.mdb.Exec("DELETE FROM goboots_sessid WHERE sid=?", session.SID)
+	_, err = db.Exec("DELETE FROM goboots_sessid WHERE sid=?", session.SID)
 	return err
 }
 
+func umshl(data []byte) map[string]interface{} {
+	outp := make(map[string]interface{})
+	json.Unmarshal(data, &outp)
+	return outp
+}
+
+func mshl(data map[string]interface{}) []byte {
+	if data == nil {
+		return nil
+	}
+	bts, _ := json.Marshal(data)
+	return bts
+}
+
 func (m *MysqlDBSession) Cleanup(minTime time.Time) {
-	if m.mdb == nil {
+	db, err := m.w.db()
+	if err != nil {
+		m.app.Logger.Println("MysqlDBSession cleanup error (could not get database):", err.Error())
 		return
 	}
-	result, err := m.mdb.Exec("DELETE FROM goboots_sessid WHERE expires < ?", minTime)
-
-	if err == nil {
-		raf, _ := result.RowsAffected()
-		m.app.Logger.Println("MysqlDBSession::Cleanup ok", raf, "entries removed")
-	} else {
-		m.app.Logger.Println("MysqlDBSession::Cleanup error", err)
+	// remove shortcount sessions
+	affected, err := db.Exec("DELETE FROM goboots_sessid WHERE shortcount < 4 AND shortexpires < NOW()")
+	if err != nil {
+		m.app.Logger.Println("MysqlDBSession cleanup error (shortcount):", err.Error())
+		return
 	}
+	af1, _ := affected.RowsAffected()
+	// remove expired sessions
+	affected, err = db.Exec("DELETE FROM goboots_sessid WHERE expires < ?", minTime)
+	if err != nil {
+		m.app.Logger.Println("MysqlDBSession::Cleanup ok", af1, "entries removed")
+		m.app.Logger.Println("MysqlDBSession cleanup error (expired):", err.Error())
+		return
+	}
+	af2, _ := affected.RowsAffected()
+	m.app.Logger.Println("MysqlDBSession::Cleanup ok", af1+af2, "entries removed")
 }
 
 func (m *MysqlDBSession) Close() {
-	if m.mdb != nil {
-		m.mdb.Close()
-		m.mdb = nil
-	}
-}
-
-func (m *MysqlDBSession) connect() error {
-	var connstr, db, un, pw string
-	var err error
-	str, ok := m.app.Config.SessionDb.(string)
-	if ok {
-		connstr = m.app.Config.Databases[str].Host
-		db = m.app.Config.Databases[str].Database
-		un = m.app.Config.Databases[str].User
-		pw = m.app.Config.Databases[str].Password
-	} else {
-		mmap := m.app.Config.SessionDb.(map[string]string)
-		connstr = mmap["Host"]
-		db = mmap["Database"]
-		un = mmap["User"]
-		pw = mmap["Password"]
-	}
-	dsn := fmt.Sprintf("%v:%v@tcp(%v)/%v", un, pw, connstr, db)
-	m.mdb, err = sqlx.Open("mysql", dsn+"?parseTime=true")
-	if err != nil {
-		return err
-	}
-	// check if table exists!
-	sqlsb, err := files.RawCreateSqlBytes()
-	if err != nil {
-		return err
-	}
-	m.mdb.Exec(string(sqlsb))
-
-	return nil
+	m.w.close()
 }
 
 func init() {
 	goboots.RegisterSessionStorageDriver("sessmysql", &MysqlDBSession{})
-}
-
-func mshl(data map[string]interface{}) string {
-	bts, _ := json.Marshal(data)
-	return string(bts)
-}
-
-func umshl(data string) map[string]interface{} {
-	outp := make(map[string]interface{})
-	json.Unmarshal([]byte(data), &outp)
-	return outp
 }
