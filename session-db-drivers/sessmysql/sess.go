@@ -65,6 +65,9 @@ func (w *dbwrapper) db() (*sqlx.DB, error) {
 	str, ok := w.app.Config.SessionDb.(string)
 	if ok {
 		connstr = w.app.Config.Databases[str].Host
+		if len(connstr) < 1 {
+			connstr = w.app.Config.Databases[str].Connection
+		}
 		sdb = w.app.Config.Databases[str].Database
 		un = w.app.Config.Databases[str].User
 		pw = w.app.Config.Databases[str].Password
