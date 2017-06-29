@@ -71,6 +71,9 @@ func (w *dbwrapper) db() (*sqlx.DB, error) {
 	} else {
 		mmap := w.app.Config.SessionDb.(map[string]string)
 		connstr = mmap["Host"]
+		if len(connstr) < 1 {
+			connstr = mmap["Connection"]
+		}
 		sdb = mmap["Database"]
 		un = mmap["User"]
 		pw = mmap["Password"]
@@ -86,6 +89,7 @@ func (w *dbwrapper) db() (*sqlx.DB, error) {
 	err = w.dbi.QueryRowx("SELECT 1 FROM goboots_sessid LIMIT 1").Scan(&one)
 	if err != nil {
 		// table doesn't exist!
+		w.app.Logger.Println(err.Error())
 		// try to create table
 		sqlb, err := files.RawCreateSqlBytes()
 		if err != nil {
