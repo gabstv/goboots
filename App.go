@@ -846,6 +846,7 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) int {
 			"",
 			false,
 			nil,
+			nil,
 			sync.Mutex{},
 		}
 
@@ -932,6 +933,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 		v.Controller,
 		v.Method,
 		false,
+		nil,
 		nil,
 		sync.Mutex{},
 	}
@@ -1021,6 +1023,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				match.ControllerName,
 				match.MethodName,
 				false,
+				nil,
 				nil,
 				sync.Mutex{},
 			}

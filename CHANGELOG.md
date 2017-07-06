@@ -1,3 +1,5 @@
+### 0.9.8
+- in.BeforeOutput(func(in *goboots.In){})
 ### 0.9.7
 - Improved Mysql sessions
 ### 0.9.6

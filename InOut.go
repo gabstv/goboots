@@ -32,6 +32,8 @@ const (
 	outFile         = 7
 )
 
+type InFunc func(in *In)
+
 type In struct {
 	R              *http.Request
 	W              http.ResponseWriter
@@ -51,6 +53,7 @@ type In struct {
 	methodName     string
 	hijacked       bool
 	defers         []func()
+	beforeoutput   []InFunc
 	mutex_defers   sync.Mutex
 }
 
@@ -71,6 +74,7 @@ func (in *In) New() *In {
 	in2.GlobalTitle = in.GlobalTitle
 	in2.reqbodyw = in.reqbodyw
 	in2.defers = make([]func(), 0)
+	in2.beforeoutput = make([]InFunc, 0)
 	return in2
 }
 
@@ -81,6 +85,15 @@ func (in *In) Defer(f func()) {
 		in.defers = make([]func(), 0)
 	}
 	in.defers = append(in.defers, f)
+}
+
+func (in *In) BeforeOutput(f InFunc) {
+	in.mutex_defers.Lock()
+	defer in.mutex_defers.Unlock()
+	if in.beforeoutput == nil {
+		in.beforeoutput = make([]InFunc, 0)
+	}
+	in.beforeoutput = append(in.beforeoutput, f)
 }
 
 func (in *In) closeall() {
@@ -220,6 +233,10 @@ func (in *In) OutputLay(layout string) *Out {
 func (in *In) outputTpl(tplPath, customLayout string) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	// exec all beforeoutput functions
+	for _, f := range in.beforeoutput {
+		f(in)
+	}
 	if len(tplPath) > 0 {
 		in.LayoutContent.Set("Content", in.OutputSoloTpl(tplPath).String())
 	}
@@ -257,6 +274,10 @@ func (in *In) outputTpl(tplPath, customLayout string) *Out {
 func (in *In) OutputSoloTpl(tplPath string) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	// exec all beforeoutput functions
+	for _, f := range in.beforeoutput {
+		f(in)
+	}
 	o.kind = outTemplateSolo
 	if in.R != nil && in.W != nil {
 		o.contentObj = in.Content.Set("Flash", in.Session().Flash.All()).All()
@@ -276,6 +297,10 @@ func (in *In) OutputSoloTpl(tplPath string) *Out {
 func (in *In) OutputJSON(jobj interface{}) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	// exec all beforeoutput functions
+	for _, f := range in.beforeoutput {
+		f(in)
+	}
 	o.kind = outJSON
 	o.contentObj = jobj
 	return o
@@ -284,6 +309,10 @@ func (in *In) OutputJSON(jobj interface{}) *Out {
 func (in *In) OutputXML(xobj interface{}) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	// exec all beforeoutput functions
+	for _, f := range in.beforeoutput {
+		f(in)
+	}
 	o.kind = outXML
 	o.contentObj = xobj
 	return o
@@ -292,6 +321,10 @@ func (in *In) OutputXML(xobj interface{}) *Out {
 func (in *In) OutputString(str string) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	// exec all beforeoutput functions
+	for _, f := range in.beforeoutput {
+		f(in)
+	}
 	o.kind = outString
 	o.contentStr = str
 	return o
@@ -300,6 +333,10 @@ func (in *In) OutputString(str string) *Out {
 func (in *In) OutputBytes(b []byte) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	// exec all beforeoutput functions
+	for _, f := range in.beforeoutput {
+		f(in)
+	}
 	o.kind = outBytes
 	o.contentBytes = b
 	return o
@@ -308,6 +345,10 @@ func (in *In) OutputBytes(b []byte) *Out {
 func (in *In) OutputFile(name string) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	// exec all beforeoutput functions
+	for _, f := range in.beforeoutput {
+		f(in)
+	}
 	o.kind = outFile
 	o.contentStr = name
 	return o
