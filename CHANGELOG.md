@@ -1,3 +1,5 @@
+### 0.9.9
+- in.OutputContentAsJSON()
 ### 0.9.8
 - in.BeforeOutput(func(in *goboots.In){})
 ### 0.9.7

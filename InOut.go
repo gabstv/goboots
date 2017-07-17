@@ -294,6 +294,10 @@ func (in *In) OutputSoloTpl(tplPath string) *Out {
 	return o
 }
 
+func (in *In) OutputContentAsJSON() *Out {
+	return in.OutputJSON(in.Content.All())
+}
+
 func (in *In) OutputJSON(jobj interface{}) *Out {
 	o := &Out{}
 	o.defers = in.defers
