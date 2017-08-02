@@ -106,8 +106,8 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//
 	app.Monitor.activeThreads.increment()
 	defer app.Monitor.activeThreads.subtract()
-	app.Monitor.openConnectionPaths.Add(urls)
-	defer app.Monitor.openConnectionPaths.Remove(urls)
+	reqid := app.Monitor.openConnectionPaths.Add(r)
+	defer app.Monitor.openConnectionPaths.Remove(reqid)
 	//
 	//
 	routed := app.enroute(w, r)
@@ -1102,9 +1102,9 @@ func (app *App) handleReq(c IController, in *In) bool {
 	}
 	if in.session != nil {
 		in.session.Flash.Clear()
-	} else {
-		in.Session().Flash.Clear()
-	}
+	} // else {
+	//	in.Session().Flash.Clear()
+	//}
 	return true
 }
 

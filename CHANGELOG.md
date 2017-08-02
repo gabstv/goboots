@@ -1,3 +1,5 @@
+### 0.10.0
+- improved AppMonitor
 ### 0.9.9
 - in.OutputContentAsJSON()
 ### 0.9.8

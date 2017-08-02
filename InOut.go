@@ -2,6 +2,7 @@ package goboots
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"encoding/xml"
@@ -233,6 +234,9 @@ func (in *In) OutputLay(layout string) *Out {
 func (in *In) outputTpl(tplPath, customLayout string) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	if in.R != nil {
+		o.ctx = in.R.Context()
+	}
 	// exec all beforeoutput functions
 	for _, f := range in.beforeoutput {
 		f(in)
@@ -274,6 +278,9 @@ func (in *In) outputTpl(tplPath, customLayout string) *Out {
 func (in *In) OutputSoloTpl(tplPath string) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	if in.R != nil {
+		o.ctx = in.R.Context()
+	}
 	// exec all beforeoutput functions
 	for _, f := range in.beforeoutput {
 		f(in)
@@ -301,6 +308,9 @@ func (in *In) OutputContentAsJSON() *Out {
 func (in *In) OutputJSON(jobj interface{}) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	if in.R != nil {
+		o.ctx = in.R.Context()
+	}
 	// exec all beforeoutput functions
 	for _, f := range in.beforeoutput {
 		f(in)
@@ -313,6 +323,9 @@ func (in *In) OutputJSON(jobj interface{}) *Out {
 func (in *In) OutputXML(xobj interface{}) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	if in.R != nil {
+		o.ctx = in.R.Context()
+	}
 	// exec all beforeoutput functions
 	for _, f := range in.beforeoutput {
 		f(in)
@@ -325,6 +338,9 @@ func (in *In) OutputXML(xobj interface{}) *Out {
 func (in *In) OutputString(str string) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	if in.R != nil {
+		o.ctx = in.R.Context()
+	}
 	// exec all beforeoutput functions
 	for _, f := range in.beforeoutput {
 		f(in)
@@ -337,6 +353,9 @@ func (in *In) OutputString(str string) *Out {
 func (in *In) OutputBytes(b []byte) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	if in.R != nil {
+		o.ctx = in.R.Context()
+	}
 	// exec all beforeoutput functions
 	for _, f := range in.beforeoutput {
 		f(in)
@@ -349,6 +368,9 @@ func (in *In) OutputBytes(b []byte) *Out {
 func (in *In) OutputFile(name string) *Out {
 	o := &Out{}
 	o.defers = in.defers
+	if in.R != nil {
+		o.ctx = in.R.Context()
+	}
 	// exec all beforeoutput functions
 	for _, f := range in.beforeoutput {
 		f(in)
@@ -433,10 +455,15 @@ type Out struct {
 	contentBytes []byte
 	tpl          *template.Template
 	defers       []func()
+	ctx          context.Context
 }
 
 func (o *Out) IsContinue() bool {
 	return o.kind == outPre
+}
+
+func (o *Out) Context() context.Context {
+	return o.ctx
 }
 
 func (o *Out) mustb(b []byte, err error) []byte {
@@ -448,6 +475,12 @@ func (o *Out) mustb(b []byte, err error) []byte {
 }
 
 func (o *Out) Render(w http.ResponseWriter) {
+	if o.ctx != nil {
+		if e := o.ctx.Err(); e != nil {
+			// context was cancelled
+			return
+		}
+	}
 	if o.defers != nil {
 		for k := range o.defers {
 			o.defers[k]()
