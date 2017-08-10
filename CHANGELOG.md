@@ -1,3 +1,5 @@
+### 0.10.1
+- Session.DeleteData(key)
 ### 0.10.0
 - improved AppMonitor
 ### 0.9.9

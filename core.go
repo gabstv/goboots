@@ -3,8 +3,6 @@ package goboots
 import (
 	"bytes"
 	"errors"
-	"github.com/gabstv/go-uuid/uuid"
-	"github.com/gabstv/i18ngo"
 	"log"
 	"net"
 	"net/http"
@@ -15,6 +13,9 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/gabstv/go-uuid/uuid"
+	"github.com/gabstv/i18ngo"
 )
 
 const (
@@ -200,6 +201,14 @@ func (s *SessFlash) Clear() {
 func (s *SessFlash) All() map[string]interface{} {
 	s.init()
 	return s.vals
+}
+
+func (s *Session) DeleteData(key string) {
+	if s.Data != nil {
+		if _, ok := s.Data[key]; ok {
+			delete(s.Data, key)
+		}
+	}
 }
 
 func (s *Session) GetData() (string, map[string]interface{}, time.Time) {
