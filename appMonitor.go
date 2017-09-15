@@ -143,11 +143,17 @@ func (c *connectionPaths) Cancel(id string) bool {
 		if ctx := data.Request.Context(); ctx != nil {
 			_, cancelfn := context.WithCancel(ctx)
 			cancelfn()
-			delete(c.entries, id)
+			c.Remove(id)
 			return true
 		}
 	}
 	return false
+}
+
+func (c *connectionPaths) Count() int {
+	c.locker.Lock()
+	defer c.locker.Unlock()
+	return len(c.entries)
 }
 
 func (c *connectionPaths) Get() map[string]int {
@@ -162,7 +168,6 @@ func (c *connectionPaths) Get() map[string]int {
 
 type appMonitor struct {
 	app                 *App
-	activeThreads       count32
 	openConnectionPaths connectionPaths
 	autoClose           bool
 	autoCloseDur        time.Duration
@@ -175,7 +180,7 @@ func newMonitor(app *App) appMonitor {
 }
 
 func (m appMonitor) ActiveThreads() int {
-	return int(m.activeThreads.get())
+	return m.openConnectionPaths.Count()
 }
 
 func (m appMonitor) ActiveConnectionPaths() map[string]int {

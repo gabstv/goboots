@@ -104,8 +104,6 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	urls := r.URL.String()
 	//
 	//
-	app.Monitor.activeThreads.increment()
-	defer app.Monitor.activeThreads.subtract()
 	reqid := app.Monitor.openConnectionPaths.Add(r)
 	defer app.Monitor.openConnectionPaths.Remove(reqid)
 	//
