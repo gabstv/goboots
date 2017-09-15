@@ -1,3 +1,5 @@
+### 0.10.2
+- Set ability to auto close slow connections
 ### 0.10.1
 - Session.DeleteData(key)
 ### 0.10.0

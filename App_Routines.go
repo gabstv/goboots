@@ -17,6 +17,9 @@ func (app *App) runRoutines() {
 
 	// SESSIONS
 	go app.routineSessionMaintenance()
+
+	// MONITOR
+	go app.routineMonitoring()
 }
 
 func (app *App) routineTemplateCacheMaitenance() {
@@ -43,5 +46,20 @@ func (app *App) routineSessionMaintenance() {
 	for {
 		curSessionDb.Cleanup(time.Now().AddDate(0, 0, -15))
 		time.Sleep(time.Minute * 15)
+	}
+}
+
+func (app *App) routineMonitoring() {
+	time.Sleep(5 * time.Minute)
+	app.Logger.Println("Monitoring routine started.")
+	for {
+		if app.Monitor.autoClose {
+			cps := app.Monitor.SlowConnectionPaths(app.Monitor.autoCloseDur)
+			for _, v := range cps {
+				app.Logger.Println("closing slow client", v.Path, v.Started.Format("02/01/2006 15:04"))
+				app.Monitor.Cancel(v.Id)
+			}
+		}
+		time.Sleep(time.Minute)
 	}
 }
