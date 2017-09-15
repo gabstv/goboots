@@ -1,25 +1,36 @@
 ### 0.10.2
 - Set ability to auto close slow connections
+
 ### 0.10.1
 - Session.DeleteData(key)
+
 ### 0.10.0
 - improved AppMonitor
+
 ### 0.9.9
 - in.OutputContentAsJSON()
+
 ### 0.9.8
-- in.BeforeOutput(func(in *goboots.In){})
+- ```in.BeforeOutput(func(in *goboots.In){})```
+
 ### 0.9.7
 - Improved Mysql sessions
+
 ### 0.9.6
 - Graceful restarts using [endless](https://github.com/gabstv/endless) (opt-in)
+
 ### 0.9.5
 - in.Defer(func())
+
 ### 0.9.4
 - get temp cert/key raw strings in config
+
 ### 0.9.3
 - Watch and reload views automatically (experimental)
+
 ### 0.9.2
 - .donotwatch file (.gitignore format)
+
 ### 0.9.0
 - Jade/Pug template support
 
