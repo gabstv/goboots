@@ -1,3 +1,8 @@
+
+### 0.10.4
+- New app.I18nProvider
+- app.GetLangFunc
+
 ### 0.10.2
 - Set ability to auto close slow connections
 

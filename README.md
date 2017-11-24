@@ -1,6 +1,6 @@
 goboots
 =======
-![version 0.10.3](https://img.shields.io/badge/v-0.10.3-blue.svg)  
+![version 0.10.4](https://img.shields.io/badge/v-0.10.4-blue.svg)  
   
 
 ![goboots](https://s3.amazonaws.com/gabstv-github/goboots.png)
@@ -23,7 +23,7 @@ run `goboots new path/to/myprojectname` (e.g. `goboots new github.com/gabstv/myw
 
 `go test -bench=. -benchmem  2>/dev/null`
 
-####v 0.4.0 @ gabstv's iMac i7 3.4 Ghz (Mid 2011)
+####v 0.4.0 @ iMac i7 3.4 Ghz (Mid 2011)
 ```
 Simple	      100000	     13807 ns/op	    2269 B/op	      48 allocs/op
 Route15	      100000	     15551 ns/op	    2625 B/op	      49 allocs/op
