@@ -116,6 +116,14 @@ func (c *InContent) init() {
 }
 
 func (c *InContent) Merge(v interface{}) *InContent {
+	return c.merge(v, true)
+}
+
+func (c *InContent) MergeNoOverwrite(v interface{}) *InContent {
+	return c.merge(v, false)
+}
+
+func (c *InContent) merge(v interface{}, overwrite bool) *InContent {
 	if v == nil {
 		return c
 	}
@@ -146,15 +154,19 @@ func (c *InContent) Merge(v interface{}) *InContent {
 		}
 		keys := vl.MapKeys()
 		for _, key := range keys {
-			val := vl.MapIndex(key)
-			c.vals[key.String()] = val.Interface()
+			if _, ok := c.Get2(key.String()); !ok || (ok && overwrite) {
+				val := vl.MapIndex(key)
+				c.vals[key.String()] = val.Interface()
+			}
 		}
 	} else {
 		// merge structy things
 		len0 := vl.NumField()
 		for i := 0; i < len0; i++ {
-			field := vl.Field(i)
-			c.vals[vtype.Field(i).Name] = field.Interface()
+			if _, ok := c.Get2(vtype.Field(i).Name); !ok || (ok && overwrite) {
+				field := vl.Field(i)
+				c.vals[vtype.Field(i).Name] = field.Interface()
+			}
 		}
 	}
 	return c
@@ -245,6 +257,7 @@ func (in *In) outputTpl(tplPath, customLayout string) *Out {
 	for _, f := range in.beforeoutput {
 		f(in)
 	}
+	in.Content.MergeNoOverwrite(in.LayoutContent.All())
 	if len(tplPath) > 0 {
 		in.LayoutContent.Set("Content", in.OutputSoloTpl(tplPath).String())
 	}
