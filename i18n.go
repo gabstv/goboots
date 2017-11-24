@@ -11,6 +11,9 @@ const (
 )
 
 func LocalizeTemplate(templateStr string, langcode string, provider i18n.Provider) string {
+	if provider == nil {
+		return templateStr
+	}
 	runes := []rune(templateStr)
 	var current rune
 	var curStr bytes.Buffer

@@ -248,7 +248,9 @@ func (in *In) OutputLay(layout string) *Out {
 }
 
 func (in *In) outputTpl(tplPath, customLayout string) *Out {
-	o := &Out{}
+	o := &Out{
+		app: in.App,
+	}
 	o.defers = in.defers
 	if in.R != nil {
 		o.ctx = in.R.Context()
@@ -293,7 +295,9 @@ func (in *In) outputTpl(tplPath, customLayout string) *Out {
 }
 
 func (in *In) OutputSoloTpl(tplPath string) *Out {
-	o := &Out{}
+	o := &Out{
+		app: in.App,
+	}
 	o.defers = in.defers
 	if in.R != nil {
 		o.ctx = in.R.Context()
@@ -323,7 +327,9 @@ func (in *In) OutputContentAsJSON() *Out {
 }
 
 func (in *In) OutputJSON(jobj interface{}) *Out {
-	o := &Out{}
+	o := &Out{
+		app: in.App,
+	}
 	o.defers = in.defers
 	if in.R != nil {
 		o.ctx = in.R.Context()
@@ -338,7 +344,9 @@ func (in *In) OutputJSON(jobj interface{}) *Out {
 }
 
 func (in *In) OutputXML(xobj interface{}) *Out {
-	o := &Out{}
+	o := &Out{
+		app: in.App,
+	}
 	o.defers = in.defers
 	if in.R != nil {
 		o.ctx = in.R.Context()
@@ -353,7 +361,9 @@ func (in *In) OutputXML(xobj interface{}) *Out {
 }
 
 func (in *In) OutputString(str string) *Out {
-	o := &Out{}
+	o := &Out{
+		app: in.App,
+	}
 	o.defers = in.defers
 	if in.R != nil {
 		o.ctx = in.R.Context()
@@ -368,7 +378,9 @@ func (in *In) OutputString(str string) *Out {
 }
 
 func (in *In) OutputBytes(b []byte) *Out {
-	o := &Out{}
+	o := &Out{
+		app: in.App,
+	}
 	o.defers = in.defers
 	if in.R != nil {
 		o.ctx = in.R.Context()
@@ -383,7 +395,9 @@ func (in *In) OutputBytes(b []byte) *Out {
 }
 
 func (in *In) OutputFile(name string) *Out {
-	o := &Out{}
+	o := &Out{
+		app: in.App,
+	}
 	o.defers = in.defers
 	if in.R != nil {
 		o.ctx = in.R.Context()
@@ -398,7 +412,9 @@ func (in *In) OutputFile(name string) *Out {
 }
 
 func (in *In) Continue() *Out {
-	o := &Out{}
+	o := &Out{
+		app: in.App,
+	}
 	o.kind = outPre
 	return o
 }
@@ -473,6 +489,7 @@ type Out struct {
 	tpl          *template.Template
 	defers       []func()
 	ctx          context.Context
+	app          *App
 }
 
 func (o *Out) IsContinue() bool {
@@ -523,7 +540,9 @@ func (o *Out) Render(w http.ResponseWriter) {
 		if len(w.Header().Get("Content-Type")) < 1 {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		}
-		o.tpl.Execute(w, o.contentObj)
+		if err := o.tpl.Execute(w, o.contentObj); err != nil && o.app != nil {
+			o.app.Logger.Println("tpl Execute error:", err.Error())
+		}
 	case outString:
 		if len(w.Header().Get("Content-Type")) < 1 {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
