@@ -371,11 +371,11 @@ func (a *App) loadAll() error {
 	a.entryHTTPS = &appHTTPS{a}
 	err := a.loadConfig()
 	if err != nil {
-		return errors.New("loadAll " + err.Error())
+		return errors.New("loadAllConfig " + err.Error())
 	}
 	err = a.loadTemplates()
 	if err != nil {
-		return errors.New("loadAll " + err.Error())
+		return errors.New("loadAllTemplates " + err.Error())
 	}
 
 	a.loadedAll = true
@@ -688,8 +688,9 @@ func (a *App) loadTemplates() error {
 					// it's a jade
 					jadef, err := jade.Parse(path, string(bytes))
 					if err != nil {
-						return errors.New("error parsing pug template file " + path + ": " + err.Error())
+						return deepErrorStr("[0] error parsing pug template file " + path + ": " + err.Error())
 					}
+					jadef = tempJadeFix(jadef, "{{", "}}")
 					bytes = []byte(jadef)
 				}
 				templ := template.New(path).Funcs(a.templateFuncMap)
@@ -712,8 +713,9 @@ func (a *App) loadTemplates() error {
 						// it's a jade
 						jadef, err := jade.Parse(locPName, string(bytes))
 						if err != nil {
-							return errors.New("error parsing pug template file " + locPName + ": " + err.Error())
+							return deepErrorStr("[1] error parsing pug template file " + locPName + ": " + err.Error())
 						}
+						jadef = tempJadeFix(jadef, "{{", "}}")
 						bytes = []byte(jadef)
 					}
 					templ, err := templ.Parse(LocalizeTemplate(string(bytes), lcv, a.I18nProvider))
@@ -764,6 +766,7 @@ func (a *App) loadTemplates() error {
 											a.Logger.Println("FSWATCH error parsing pug template file", path, err.Error())
 											break
 										}
+										jadef = tempJadeFix(jadef, "{{", "}}")
 										bytes = []byte(jadef)
 									}
 									templ := template.New(path).Funcs(a.templateFuncMap)
@@ -790,6 +793,7 @@ func (a *App) loadTemplates() error {
 												a.Logger.Println("FSWATCH error parsing pug template file", locPName, ":", err.Error())
 												break
 											}
+											jadef = tempJadeFix(jadef, "{{", "}}")
 											bytes = []byte(jadef)
 										}
 										templ, err := templ.Parse(LocalizeTemplate(string(bytes), lcv, a.I18nProvider))

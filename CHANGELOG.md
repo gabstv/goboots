@@ -1,3 +1,5 @@
+### 0.10.5
+- workaround for bug https://github.com/Joker/jade/issues/16
 
 ### 0.10.4
 - New app.I18nProvider
