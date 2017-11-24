@@ -22,7 +22,8 @@ import (
 
 	"github.com/Joker/jade"
 	"github.com/gabstv/dson2json"
-	"github.com/gabstv/i18ngo"
+	"github.com/gabstv/i18n"
+	"github.com/gabstv/i18n/po/poutil"
 	"github.com/gorilla/websocket"
 	"gopkg.in/fsnotify.v1"
 	"gopkg.in/yaml.v2"
@@ -50,6 +51,7 @@ type App struct {
 	GenericCaches *GenericCacheCollection
 	Random        *rand.Rand
 	HTTPErrorFunc func(w http.ResponseWriter, r *http.Request, err int)
+	GetLangFunc   func(w http.ResponseWriter, r *http.Request) string
 	// private
 	controllerMap     map[string]IController
 	templateMap       map[string]*templateInfo
@@ -64,6 +66,7 @@ type App struct {
 	Logger            Logger
 	AccessLogger      Logger
 	TemplateProcessor TemplateProcessor
+	I18nProvider      i18n.Provider
 	//
 	globalLoadOnce sync.Once
 }
@@ -292,8 +295,8 @@ func (a *App) RegisterController(c IController) {
 }
 
 func (a *App) GetViewTemplate(localpath string) *template.Template {
-	if len(a.Config.LocalePath) > 0 {
-		localpath = localpath + "_" + i18ngo.GetDefaultLanguageCode()
+	if a.I18nProvider != nil {
+		localpath = localpath + "_" + a.Config.DefaultLanguage
 	}
 	if tpl, ok := a.templateMap[filepath.Join(a.Config.ViewsFolderPath, localpath)]; ok {
 		return tpl.data
@@ -303,7 +306,11 @@ func (a *App) GetViewTemplate(localpath string) *template.Template {
 }
 
 func (a *App) GetLocalizedViewTemplate(localpath string, w http.ResponseWriter, r *http.Request) *template.Template {
-	localpath = localpath + "_" + GetUserLang(w, r)
+	lfn := a.GetLangFunc
+	if lfn == nil {
+		lfn = a.DefaultGetLang
+	}
+	localpath = localpath + "_" + lfn(w, r)
 	if tpl, ok := a.templateMap[a.Config.ViewsFolderPath+"/"+localpath]; ok {
 		return tpl.data
 	}
@@ -543,7 +550,12 @@ func (app *App) loadConfig() error {
 		if !fi.IsDir() {
 			return errors.New("path " + locPath + " is not a directory")
 		}
-		i18ngo.LoadPoAll(locPath)
+		if app.I18nProvider == nil {
+			app.I18nProvider, err = poutil.LoadAll(locPath, app.Config.DefaultLanguage)
+			if err != nil {
+				return err
+			}
+		}
 		app.Logger.Println("i18n loaded.")
 	}
 	//
@@ -634,7 +646,10 @@ func (a *App) loadTemplates() error {
 	a.templateMap = make(map[string]*templateInfo, 0)
 	fdir := FormatPath(a.Config.ViewsFolderPath)
 	bytesLoaded := int(0)
-	langs := i18ngo.GetLanguageCodes()
+	langs := make([]string, 0)
+	if a.I18nProvider != nil {
+		langs = a.I18nProvider.LanguageCodes()
+	}
 	vPath := func(path string, f os.FileInfo, err error) error {
 		if f.IsDir() {
 			if fswatcher != nil {
@@ -701,7 +716,7 @@ func (a *App) loadTemplates() error {
 						}
 						bytes = []byte(jadef)
 					}
-					templ, err := templ.Parse(LocalizeTemplate(string(bytes), lcv))
+					templ, err := templ.Parse(LocalizeTemplate(string(bytes), lcv, a.I18nProvider))
 					if err != nil {
 						return errors.New("loadTemplates " + locPName + " templ.Parse LocalizeTemplate " + err.Error())
 					}
@@ -777,7 +792,7 @@ func (a *App) loadTemplates() error {
 											}
 											bytes = []byte(jadef)
 										}
-										templ, err := templ.Parse(LocalizeTemplate(string(bytes), lcv))
+										templ, err := templ.Parse(LocalizeTemplate(string(bytes), lcv, a.I18nProvider))
 										if err != nil {
 											a.Logger.Println("FSWATCH loadTemplates", locPName, "templ.Parse LocalizeTemplate", err.Error())
 											break
@@ -824,7 +839,17 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) int {
 		urlbits := strings.Split(niceurl, "/")[1:]
 		//
 		var inObj *In
-		ul := GetUserLang(w, r)
+		lfn := app.GetLangFunc
+		if lfn == nil {
+			lfn = app.DefaultGetLang
+		}
+		ul := lfn(w, r)
+		pageTitle := app.Config.GlobalPageTitle
+		if app.I18nProvider != nil {
+			if ll := app.I18nProvider.L(ul); ll != nil {
+				pageTitle = ll.T(pageTitle)
+			}
+		}
 		inObj = &In{
 			r,
 			w,
@@ -837,7 +862,7 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) int {
 			app,
 			nil,
 			ul,
-			i18ngo.TL(ul, app.Config.GlobalPageTitle),
+			pageTitle,
 			make([]io.Closer, 0),
 			&InBodyWrapper{r},
 			"servePublicFolder",
@@ -912,7 +937,17 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 	}
 
 	var inObj *In
-	ul := GetUserLang(w, r)
+	lfn := app.GetLangFunc
+	if lfn == nil {
+		lfn = app.DefaultGetLang
+	}
+	ul := lfn(w, r)
+	pageTitle := app.Config.GlobalPageTitle
+	if app.I18nProvider != nil {
+		if ll := app.I18nProvider.L(ul); ll != nil {
+			pageTitle = ll.T(pageTitle)
+		}
+	}
 	inObj = &In{
 		r,
 		w,
@@ -925,7 +960,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 		app,
 		c,
 		ul,
-		i18ngo.TL(ul, app.Config.GlobalPageTitle),
+		pageTitle,
 		make([]io.Closer, 0),
 		&InBodyWrapper{r},
 		v.Controller,
@@ -1002,7 +1037,17 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 			}
 			//
 			var inObj *In
-			ul := GetUserLang(w, r)
+			lfn := app.GetLangFunc
+			if lfn == nil {
+				lfn = app.DefaultGetLang
+			}
+			ul := lfn(w, r)
+			pageTitle := app.Config.GlobalPageTitle
+			if app.I18nProvider != nil {
+				if ll := app.I18nProvider.L(ul); ll != nil {
+					pageTitle = ll.T(pageTitle)
+				}
+			}
 			inObj = &In{
 				r,
 				w,
@@ -1015,7 +1060,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				app,
 				c,
 				ul,
-				i18ngo.TL(ul, app.Config.GlobalPageTitle),
+				pageTitle,
 				make([]io.Closer, 0),
 				&InBodyWrapper{r},
 				match.ControllerName,

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/gabstv/go-uuid/uuid"
-	"github.com/gabstv/i18ngo"
 )
 
 const (
@@ -390,7 +389,7 @@ func (app *App) GetSession(w http.ResponseWriter, r *http.Request) *Session {
 	return session
 }
 
-func GetUserLang(w http.ResponseWriter, r *http.Request) string {
+func (a *App) DefaultGetLang(w http.ResponseWriter, r *http.Request) string {
 	var l string
 	// get lang from cookies
 	cookie, err := r.Cookie("lang")
@@ -402,7 +401,10 @@ func GetUserLang(w http.ResponseWriter, r *http.Request) string {
 	alh := r.Header.Get("Accept-Language")
 	// 2013-07-29 : not all clients actually send this header (googlebot/wget etc)
 	if len(alh) > 1 {
-		validlangs := i18ngo.GetLanguageCodes()
+		validlangs := make([]string, 0)
+		if a.I18nProvider != nil {
+			validlangs = a.I18nProvider.LanguageCodes()
+		}
 		// break alh
 		alh0 := strings.Split(alh, ",")
 		for _, v := range alh0 {
@@ -423,11 +425,11 @@ func GetUserLang(w http.ResponseWriter, r *http.Request) string {
 				SetCookieSimple(w, "lang", l)
 			}
 		} else {
-			l = i18ngo.GetDefaultLanguageCode()
+			l = a.Config.DefaultLanguage
 		}
 		return l
 	}
-	return i18ngo.GetDefaultLanguageCode()
+	return a.Config.DefaultLanguage
 }
 
 func SetUserLang(w http.ResponseWriter, r *http.Request, langcode string) {

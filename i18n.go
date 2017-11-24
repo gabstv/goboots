@@ -2,14 +2,15 @@ package goboots
 
 import (
 	"bytes"
-	"github.com/gabstv/i18ngo"
+
+	"github.com/gabstv/i18n"
 )
 
 const (
 	runePct = rune('%')
 )
 
-func LocalizeTemplate(templateStr string, langcode string) string {
+func LocalizeTemplate(templateStr string, langcode string, provider i18n.Provider) string {
 	runes := []rune(templateStr)
 	var current rune
 	var curStr bytes.Buffer
@@ -56,7 +57,15 @@ func LocalizeTemplate(templateStr string, langcode string) string {
 							if runes[i+2] == runePct {
 								// finalize string!
 								i += 2
-								buf.WriteString(i18ngo.TL(langcode, curStr.String()))
+								if provider == nil {
+									buf.WriteString(curStr.String())
+								} else {
+									if ll := provider.L(langcode); ll != nil {
+										buf.WriteString(ll.T(curStr.String()))
+									} else {
+										buf.WriteString(curStr.String())
+									}
+								}
 								break
 							}
 						}

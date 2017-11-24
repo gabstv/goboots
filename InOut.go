@@ -18,7 +18,6 @@ import (
 	"sync"
 	"text/template"
 
-	"github.com/gabstv/i18ngo"
 	"github.com/gorilla/websocket"
 )
 
@@ -206,7 +205,12 @@ func (c *InContent) All() map[string]interface{} {
 
 // Translates text to the user language (if available)
 func (in *In) T(format string, v ...interface{}) string {
-	return i18ngo.TL(in.LangCode, format, v...)
+	if in.App.I18nProvider != nil {
+		if ll := in.App.I18nProvider.L(in.LangCode); ll != nil {
+			return ll.T(format, v...)
+		}
+	}
+	return fmt.Sprintf(format, v...)
 }
 
 func (in *In) Session() *Session {
