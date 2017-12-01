@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gabstv/goboots"
 	"github.com/gabstv/goboots/session-db-drivers/sessmysql/files"
-	_ "github.com/go-sql-driver/mysql"
+	//_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"sync"
 	"time"
