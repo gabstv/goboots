@@ -52,6 +52,8 @@ type App struct {
 	Random        *rand.Rand
 	HTTPErrorFunc func(w http.ResponseWriter, r *http.Request, err int)
 	GetLangFunc   func(w http.ResponseWriter, r *http.Request) string
+	ServeMux      *http.ServeMux
+	ServeMuxRoot  func(w http.ResponseWriter, r *http.Request)
 	// private
 	controllerMap     map[string]IController
 	templateMap       map[string]*templateInfo
@@ -77,6 +79,18 @@ func NewApp() *App {
 	app.Monitor = newMonitor(app)
 	app.Config = &AppConfig{}
 	app.TemplateProcessor = &defaultTemplateProcessor{}
+	app.ServeMux = http.NewServeMux()
+	app.ServeMux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path != "/" {
+			start := time.Now()
+			urls := req.URL.String()
+			staticResolve(app, req, w, start, urls)
+			return
+		}
+		if app.ServeMuxRoot != nil {
+			app.ServeMuxRoot(w, req)
+		}
+	})
 	return app
 }
 
@@ -102,6 +116,47 @@ func (a *appHTTPS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	a.app.ServeHTTP(w, r)
 }
 
+func staticResolve(app *App, r *http.Request, w http.ResponseWriter, start time.Time, urls string) {
+	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && app.Config.GZipStatic {
+		// use gzip
+		w.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(w)
+		gzr := &gzipRespWriter{gz, w}
+		staticStatus := app.servePublicFolder(gzr, r)
+		gz.Close()
+		if app.Config.StaticAccessLog {
+			addr := r.Header.Get("X-Real-IP")
+			if addr == "" {
+				addr = r.Header.Get("X-Forwarded-For")
+				if addr == "" {
+					addr = r.RemoteAddr
+				}
+			}
+			if app.AccessLogger == nil {
+				app.Logger.Println(addr, "[RGZ] ", urls, staticStatus, time.Since(start))
+			} else {
+				app.AccessLogger.Println(addr, "[RGZ] ", urls, staticStatus, time.Since(start))
+			}
+		}
+	} else {
+		staticStatus := app.servePublicFolder(w, r)
+		if app.Config.StaticAccessLog {
+			addr := r.Header.Get("X-Real-IP")
+			if addr == "" {
+				addr = r.Header.Get("X-Forwarded-For")
+				if addr == "" {
+					addr = r.RemoteAddr
+				}
+			}
+			if app.AccessLogger == nil {
+				app.Logger.Println(addr, "[ R ] ", urls, staticStatus, time.Since(start))
+			} else {
+				app.AccessLogger.Println(addr, "[ R ] ", urls, staticStatus, time.Since(start))
+			}
+		}
+	}
+}
+
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	urls := r.URL.String()
@@ -110,69 +165,35 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	reqid := app.Monitor.openConnectionPaths.Add(r)
 	defer app.Monitor.openConnectionPaths.Remove(reqid)
 	//
-	//
 	routed := app.enroute(w, r)
 	//if routes didn't find anything
 	if !routed {
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && app.Config.GZipStatic {
-			// use gzip
-			w.Header().Set("Content-Encoding", "gzip")
-			gz := gzip.NewWriter(w)
-			gzr := &gzipRespWriter{gz, w}
-			staticStatus := app.servePublicFolder(gzr, r)
-			gz.Close()
-			if app.Config.StaticAccessLog {
-				addr := r.Header.Get("X-Real-IP")
-				if addr == "" {
-					addr = r.Header.Get("X-Forwarded-For")
-					if addr == "" {
-						addr = r.RemoteAddr
-					}
-				}
-				if app.AccessLogger == nil {
-					app.Logger.Println(addr, "[RGZ] ", urls, staticStatus, time.Since(start))
-				} else {
-					app.AccessLogger.Println(addr, "[RGZ] ", urls, staticStatus, time.Since(start))
-				}
-			}
-		} else {
-			staticStatus := app.servePublicFolder(w, r)
-			if app.Config.StaticAccessLog {
-				addr := r.Header.Get("X-Real-IP")
-				if addr == "" {
-					addr = r.Header.Get("X-Forwarded-For")
-					if addr == "" {
-						addr = r.RemoteAddr
-					}
-				}
-				if app.AccessLogger == nil {
-					app.Logger.Println(addr, "[ R ] ", urls, staticStatus, time.Since(start))
-				} else {
-					app.AccessLogger.Println(addr, "[ R ] ", urls, staticStatus, time.Since(start))
-				}
+		if app.ServeMux != nil {
+			app.ServeMux.ServeHTTP(w, r)
+			return
+		}
+		staticResolve(app, r, w, start, urls)
+		return
+	}
+	if app.Config.DynamicAccessLog {
+		addr := r.Header.Get("X-Real-IP")
+		if addr == "" {
+			addr = r.Header.Get("X-Forwarded-For")
+			if addr == "" {
+				addr = r.RemoteAddr
 			}
 		}
-	} else {
-		if app.Config.DynamicAccessLog {
-			addr := r.Header.Get("X-Real-IP")
-			if addr == "" {
-				addr = r.Header.Get("X-Forwarded-For")
-				if addr == "" {
-					addr = r.RemoteAddr
-				}
-			}
-			if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") || !app.Config.GZipDynamic {
-				if app.AccessLogger == nil {
-					app.Logger.Println(addr, "{ R } ", r.RequestURI, time.Since(start))
-				} else {
-					app.AccessLogger.Println(addr, "{ R } ", r.RequestURI, time.Since(start))
-				}
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") || !app.Config.GZipDynamic {
+			if app.AccessLogger == nil {
+				app.Logger.Println(addr, "{ R } ", r.RequestURI, time.Since(start))
 			} else {
-				if app.AccessLogger == nil {
-					app.Logger.Println(addr, "{RGZ} ", r.RequestURI, time.Since(start))
-				} else {
-					app.AccessLogger.Println(addr, "{RGZ} ", r.RequestURI, time.Since(start))
-				}
+				app.AccessLogger.Println(addr, "{ R } ", r.RequestURI, time.Since(start))
+			}
+		} else {
+			if app.AccessLogger == nil {
+				app.Logger.Println(addr, "{RGZ} ", r.RequestURI, time.Since(start))
+			} else {
+				app.AccessLogger.Println(addr, "{RGZ} ", r.RequestURI, time.Since(start))
 			}
 		}
 	}
@@ -734,10 +755,8 @@ func (a *App) loadTemplates() error {
 	if err != nil {
 		return errors.New("loadTemplates TemplateProcessor.Walk " + fdir + " " + err.Error())
 	}
-	for k, _ := range a.templateMap {
-		a.Logger.Println("loaded", k)
-	}
 	if fswatcher != nil {
+		a.Logger.Println("will start fswatcher")
 		go func() {
 			defer fswatcher.Close()
 			for {
@@ -977,7 +996,7 @@ func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWrit
 
 	upgrade := r.Header.Get("Upgrade")
 	if upgrade == "websocket" || upgrade == "Websocket" {
-		if r.Method != "GET" {
+		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed "+r.Method, 405)
 			return true
 		}
@@ -1002,7 +1021,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 	}
 	if app.Router != nil {
 		upgrade := r.Header.Get("Upgrade")
-		if r.Method == "GET" && (upgrade == "websocket" || upgrade == "Websocket") {
+		if r.Method == http.MethodGet && (upgrade == "websocket" || upgrade == "Websocket") {
 			r.Method = "WS"
 		}
 		match := app.Router.Route(r)
@@ -1083,7 +1102,7 @@ func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 				}
 				//app.Logger.Println("websocket will upgrade")
 				inObj.hijacked = true
-				r.Method = "GET"
+				r.Method = http.MethodGet
 				conn, err := wsupgrader.Upgrade(w, r, nil)
 				if err != nil {
 					app.Logger.Println("websocket upgrade error", err)
