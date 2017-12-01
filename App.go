@@ -717,6 +717,12 @@ func (a *App) loadTemplates() error {
 									a.Logger.Println("FSWATCH loadTemplates TemplateProcessor.ReadFile ", path, err.Error())
 									break
 								}
+								ldir, _ := filepath.Split(path)
+								bytes, err = a.parseTemplateIncludeDeps(ldir, bytes)
+								if err != nil {
+									a.Logger.Println("FSWATCH loadTemplates TemplateProcessor.parseTemplateIncludeDeps ", path, err.Error())
+									break
+								}
 								if len(a.Config.LocalePath) < 1 {
 									tplInfo := &templateInfo{
 										path:       path,

@@ -1,3 +1,6 @@
+### 0.11.1
+- fixed partial template loading on FSWATCH
+
 ### 0.11.0
 - removed oldRoutesMethod
 - added ServeMux for custom http handlers
