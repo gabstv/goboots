@@ -25,6 +25,7 @@ import (
 	"github.com/gabstv/i18n"
 	"github.com/gabstv/i18n/po/poutil"
 	"github.com/gorilla/websocket"
+	"github.com/julienschmidt/httprouter"
 	"gopkg.in/fsnotify.v1"
 	"gopkg.in/yaml.v2"
 )
@@ -52,7 +53,7 @@ type App struct {
 	Random        *rand.Rand
 	HTTPErrorFunc func(w http.ResponseWriter, r *http.Request, err int)
 	GetLangFunc   func(w http.ResponseWriter, r *http.Request) string
-	ServeMux      *http.ServeMux
+	ServeMux      *httprouter.Router
 	ServeMuxRoot  func(w http.ResponseWriter, r *http.Request)
 	// private
 	controllerMap     map[string]IController
@@ -79,8 +80,8 @@ func NewApp() *App {
 	app.Monitor = newMonitor(app)
 	app.Config = &AppConfig{}
 	app.TemplateProcessor = &defaultTemplateProcessor{}
-	app.ServeMux = http.NewServeMux()
-	app.ServeMux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+	app.ServeMux = httprouter.New()
+	app.ServeMux.NotFound = func(w http.ResponseWriter, req *http.Request) {
 		if req.URL.Path != "/" {
 			start := time.Now()
 			urls := req.URL.String()
@@ -90,7 +91,7 @@ func NewApp() *App {
 		if app.ServeMuxRoot != nil {
 			app.ServeMuxRoot(w, req)
 		}
-	})
+	}
 	return app
 }
 
