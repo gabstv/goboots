@@ -62,6 +62,12 @@
   revision = "99f3ad6d85ae53d0fecf788ab62d0e9734b3c117"
 
 [[projects]]
+  name = "github.com/julienschmidt/httprouter"
+  packages = ["."]
+  revision = "8c199fb6259ffc1af525cc3ad52ee60ba8359669"
+  version = "v1.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/monochromegane/go-gitignore"
   packages = ["."]
@@ -124,6 +130,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e555398b3e63b21ac4368ad58d0ee780a71b8e46b71968b77712cad17bc79477"
+  inputs-digest = "db374ee509864097ac138c9aa2ac739cec91e03f192dbc23cfad939a25ca7141"
   solver-name = "gps-cdcl"
   solver-version = 1

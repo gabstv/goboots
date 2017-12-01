@@ -42,7 +42,6 @@ type AppConfig struct {
 
 	// Paths
 	RoutesConfigPath string   `yaml:"RoutesConfigPath"`
-	OldRouteMethod   bool     `yaml:"OldRouteMethod"` // use deprecated route method
 	CachePath        string   `yaml:"CachePath"`
 	ViewsFolderPath  string   `yaml:"ViewsFolderPath"`
 	ViewsExtensions  []string `yaml:"ViewsExtensions"` // .html, .tpl

@@ -1,3 +1,7 @@
+### 0.11.0
+- removed oldRoutesMethod
+- added ServeMux for custom http handlers
+
 ### 0.10.5
 - workaround for bug https://github.com/Joker/jade/issues/16
 

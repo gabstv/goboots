@@ -169,6 +169,10 @@ func (router *Router) Route(req *http.Request) *RouteMatch {
 // Refresh re-reads the routes file and re-calculates the routing table.
 // Returns an error if a specified action could not be found.
 func (router *Router) Refresh() (err error) {
+	if router.path == "" {
+		err = router.updateTree()
+		return
+	}
 	router.Routes, err = parseRoutesFile(router.path, "", true, router.app)
 	if err != nil {
 		return

@@ -44,7 +44,6 @@ type App struct {
 	// public
 	AppConfigPath string
 	Config        *AppConfig
-	Routes        []OldRoute
 	Router        *Router
 	Filters       []Filter
 	StaticFilters []Filter
@@ -54,7 +53,6 @@ type App struct {
 	HTTPErrorFunc func(w http.ResponseWriter, r *http.Request, err int)
 	GetLangFunc   func(w http.ResponseWriter, r *http.Request) string
 	ServeMux      *httprouter.Router
-	ServeMuxRoot  func(w http.ResponseWriter, r *http.Request)
 	// private
 	controllerMap     map[string]IController
 	templateMap       map[string]*templateInfo
@@ -81,17 +79,14 @@ func NewApp() *App {
 	app.Config = &AppConfig{}
 	app.TemplateProcessor = &defaultTemplateProcessor{}
 	app.ServeMux = httprouter.New()
-	app.ServeMux.NotFound = func(w http.ResponseWriter, req *http.Request) {
+	app.ServeMux.NotFound = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.URL.Path != "/" {
 			start := time.Now()
 			urls := req.URL.String()
 			staticResolve(app, req, w, start, urls)
 			return
 		}
-		if app.ServeMuxRoot != nil {
-			app.ServeMuxRoot(w, req)
-		}
-	}
+	})
 	return app
 }
 
@@ -445,63 +440,15 @@ func (app *App) LoadConfigFile() error {
 	return json.Unmarshal(bytes, app.Config)
 }
 
-// deprecated routes method
-func (app *App) loadRoutesOld() error {
-	var bytes []byte
-	var err error
-	if app.Routes == nil {
-		app.Routes = make([]OldRoute, 0)
-	}
-	if len(app.Config.RoutesConfigPath) > 0 {
-		// 2014-07-22 Now accepts multiple paths, separated by semicolons
-		routespaths := strings.Split(app.Config.RoutesConfigPath, ";")
-		for _, rpath := range routespaths {
-			rpath = strings.TrimSpace(rpath)
-			fdir := FormatPath(rpath)
-			bytes, err = ioutil.ReadFile(fdir)
-			if err != nil {
-				return errors.New("loadRoutesOld ioutil.ReadFile " + fdir + " " + err.Error())
-			}
-			tempslice := make([]OldRoute, 0)
-			if xt := filepath.Ext(fdir); xt == ".dson" {
-				var bf0, bf1 by.Buffer
-				bf0.Write(bytes)
-				err = dson2json.Convert(&bf0, &bf1)
-				if err != nil {
-					return errors.New("loadRoutesOld dson2json.Convert " + fdir + " " + err.Error())
-				}
-				bytes = bf1.Bytes()
-			}
-			err = json.Unmarshal(bytes, &tempslice)
-			if err != nil {
-				return errors.New("loadRoutesOld json.Unmarshal " + fdir + " " + err.Error())
-			}
-			for _, v := range tempslice {
-				app.Logger.Println("Route `" + v.Path + "` loaded.")
-				app.Routes = append(app.Routes, v)
-			}
-		}
-	}
-
-	for i := 0; i < len(app.Routes); i++ {
-		if strings.Index(app.Routes[i].Path, "^") == 0 {
-			app.Routes[i]._t = routeMethodRegExp
-		} else if strings.HasSuffix(app.Routes[i].Path, "*") {
-			app.Routes[i]._t = routeMethodRemainder
-		} else if strings.HasSuffix(app.Routes[i].Path, "/?") {
-			app.Routes[i]._t = routeMethodIgnoreTrail
-		}
-	}
-	return nil
-}
-
 func (a *App) loadRoutesNew() error {
 	if a.Router == nil && a.Config == nil {
-		return errors.New("loadRoutesNew: cannot load routes because Congif is null")
+		return errors.New("loadRoutesNew: cannot load routes because Config is null")
 	}
 	if a.Config != nil {
 		if a.Router == nil && len(a.Config.RoutesConfigPath) < 1 {
-			return errors.New("loadRoutesNew: Config.RoutesConfigPath is not set")
+			a.Logger.Println("no routes to load (Config.RoutesConfigPath is empty)")
+			//a.Router = NewRouter(a, "")
+			//return errors.New("loadRoutesNew: Config.RoutesConfigPath is not set")
 		}
 	}
 	if a.Router != nil {
@@ -552,11 +499,7 @@ func (app *App) loadConfig() error {
 	//
 	// LOAD Routes
 	//
-	if app.Config.OldRouteMethod {
-		err = app.loadRoutesOld()
-	} else {
-		err = app.loadRoutesNew()
-	}
+	err = app.loadRoutesNew()
 	if err != nil {
 		return errors.New("loadRoutes " + err.Error())
 	}
@@ -922,104 +865,10 @@ func (app *App) servePublicFolder(w http.ResponseWriter, r *http.Request) int {
 	return app.ServeFile(w, r, fdir)
 }
 
-func (a *App) oldRouteMatch(niceurl string) *OldRoute {
-	for _, v := range a.Routes {
-		if v.IsMatch(niceurl) {
-			return &v
-		}
-	}
-	return nil
-}
-
-func (app *App) enrouteOld(niceurl string, urlbits []string, w http.ResponseWriter, r *http.Request) bool {
-	v := app.oldRouteMatch(niceurl)
-	if v == nil {
-		return false
-	}
-	// enroute based on method
-	c := app.controllerMap[v.Controller]
-	if c == nil {
-		app.Logger.Fatalf("Controller '%s' is not registered!\n", v.Controller)
-		app.DoHTTPError(w, r, 501)
-		return true
-	}
-	if app.Config.TLSRedirect || v.RedirectTLS {
-		if (r.URL.Scheme == "http" || r.URL.Scheme == "ws") || (r.URL.Scheme == "" && r.TLS == nil) {
-			if hh := r.Header.Get("X-Forwarded-Proto"); hh != "https" && hh != "wss" { // don't redirect if proxy is already secure
-				app.Logger.Println("X-Forwarded-Proto: ", hh)
-				// redirect to https
-				redir, err := app.getTLSRedirectURL(app.Config.HostAddrTLS, r.URL)
-				if err != nil {
-					http.Error(w, "Internal Server Error - https redirect - "+err.Error(), 501)
-					return true
-				}
-				app.Logger.Println("TLS Redirect: ", redir)
-				http.Redirect(w, r, redir, 302)
-				return true
-			}
-		}
-	}
-
-	var inObj *In
-	lfn := app.GetLangFunc
-	if lfn == nil {
-		lfn = app.DefaultGetLang
-	}
-	ul := lfn(w, r)
-	pageTitle := app.Config.GlobalPageTitle
-	if app.I18nProvider != nil {
-		if ll := app.I18nProvider.L(ul); ll != nil {
-			pageTitle = ll.T(pageTitle)
-		}
-	}
-	inObj = &In{
-		r,
-		w,
-		nil,
-		urlbits,
-		Params{},
-		nil,
-		&InContent{},
-		&InContent{},
-		app,
-		c,
-		ul,
-		pageTitle,
-		make([]io.Closer, 0),
-		&InBodyWrapper{r},
-		v.Controller,
-		v.Method,
-		false,
-		nil,
-		nil,
-		sync.Mutex{},
-	}
-
-	upgrade := r.Header.Get("Upgrade")
-	if upgrade == "websocket" || upgrade == "Websocket" {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed "+r.Method, 405)
-			return true
-		}
-		conn, err := wsupgrader.Upgrade(w, r, nil)
-		if err != nil {
-			http.Error(w, err.Error(), 501)
-			return true
-		}
-		r.Method = "WS"
-		inObj.Wsock = conn
-	}
-
-	return app.handleReq(c, inObj)
-}
-
 func (app *App) enroute(w http.ResponseWriter, r *http.Request) bool {
 	niceurl, _ := url.QueryUnescape(r.URL.String())
 	niceurl = strings.Split(niceurl, "?")[0]
 	urlbits := strings.Split(niceurl, "/")[1:]
-	if app.Config.OldRouteMethod {
-		return app.enrouteOld(niceurl, urlbits, w, r)
-	}
 	if app.Router != nil {
 		upgrade := r.Header.Get("Upgrade")
 		if r.Method == http.MethodGet && (upgrade == "websocket" || upgrade == "Websocket") {

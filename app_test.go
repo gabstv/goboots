@@ -1,9 +1,7 @@
 package goboots
 
 import (
-	"bytes"
 	"errors"
-	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,6 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/julienschmidt/httprouter"
 )
 
 type testController struct {
@@ -47,26 +48,18 @@ func TestApp(t *testing.T) {
 		Name:            "Test App",
 		HostAddr:        ":8001",
 		GlobalPageTitle: "Test App - ",
-		OldRouteMethod:  true,
 	}
 	app.InitSessionStorage("sessmemory")
-	r0 := OldRoute{}
-	r0.Path = "/"
-	r0.Controller = "testController"
-	r0._t = routeMethodExact
-	r0.Method = "Test"
-	// ws
-	r1 := OldRoute{}
-	r1.Path = "/ws"
-	r1.Controller = "testController"
-	r1._t = routeMethodExact
-	r1.Method = "TestWebsocket"
-	app.Routes = []OldRoute{r0, r1}
+	ctrlr := &testController{}
 
-	app.RegisterController(&testController{})
+	app.RegisterController(ctrlr)
 	app.Filters = []Filter{
 		CompressFilter,
 	}
+
+	app.ServeMux.GET("/", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		w.Write([]byte(`{"success":true,"error":""}`))
+	})
 
 	t.Log("TESTING APP\n")
 
@@ -77,7 +70,7 @@ func TestApp(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 2)
 
 	resp, err := http.Get("http://localhost:8001/")
 	if err != nil {
@@ -93,47 +86,6 @@ func TestApp(t *testing.T) {
 	if string(b) != `{"success":true,"error":""}` {
 		t.Fatal("expected output mismatch!", string(b), `{"success":true,"error":""}`)
 	}
-
-	cl := &http.Client{}
-	req, _ := http.NewRequest("GET", "http://localhost:8001/", nil)
-	req.Header.Set("Accept-Encoding", "gzip")
-	resp, err = cl.Do(req)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log(resp.Header)
-	//t.Log(b, len(b))
-
-	if bytes.Compare(b, []byte{
-		123, 34, 115, 117, 99, 99, 101, 115,
-		115, 34, 58, 116, 114, 117, 101, 44,
-		34, 101, 114, 114, 111, 114, 34, 58, 34, 34, 125,
-	}) != 0 {
-		t.Fatal("gzipped output mismatch!", b)
-	}
-
-	// test websocket
-	dialer := websocket.DefaultDialer
-	ws, _, err := dialer.Dial("ws://localhost:8001/ws", nil)
-	//ws, err := websocket.Dial("ws://localhost:8001/ws", "", "http://localhost/")
-	if err != nil {
-		t.Fatal("could not dial (websocket)", err)
-	}
-	message := []byte("hello, websocket!")
-	err = ws.WriteMessage(websocket.TextMessage, message)
-	if err != nil {
-		t.Fatal("could not write (websocket)", err)
-	}
-	_, p, err := ws.ReadMessage()
-	if err != nil {
-		t.Fatal("could not read (websocket)", err)
-	}
-	t.Log(string(p))
 }
 
 type testDBSession struct {
@@ -234,7 +186,6 @@ func TestTemplateProcessor(t *testing.T) {
 		Name:            "Test App",
 		HostAddr:        ":8001",
 		GlobalPageTitle: "Test App - ",
-		OldRouteMethod:  true,
 	}
 	err := app.loadTemplates()
 	if err != nil {
