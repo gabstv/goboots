@@ -463,6 +463,7 @@ type templateInfo struct {
 	path       string
 	data       *template.Template
 	lastUpdate time.Time
+	deps       []string
 }
 
 func SetCookieAdv(w http.ResponseWriter, name string, value string, path string, domain string, expires time.Time, maxage int, secure bool, httpOnly bool) {

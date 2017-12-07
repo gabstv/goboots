@@ -1,3 +1,6 @@
+### 0.11.2
+- updating partial templates now trigger a reload on parent templates
+
 ### 0.11.1
 - fixed partial template loading on FSWATCH
 

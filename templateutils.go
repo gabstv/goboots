@@ -13,11 +13,11 @@ import (
 // {{partial "NAME" /path/to/template}}
 
 //
-func (a *App) parseTemplateIncludeDeps(lwd string, template []byte) ([]byte, error) {
-	return parseTemplateIncludeDeps(a.TemplateProcessor, a.basePath, a.Config.ViewsFolderPath, lwd, template)
+func (a *App) parseTemplateIncludeDeps(lwd string, template []byte, partialTemplateListIn *[]string) ([]byte, error) {
+	return parseTemplateIncludeDeps(a.TemplateProcessor, a.basePath, a.Config.ViewsFolderPath, lwd, template, partialTemplateListIn)
 }
 
-func parseTemplateIncludeDeps(templateProcessor TemplateProcessor, basePath, viewsFolderPath, lwd string, template []byte) ([]byte, error) {
+func parseTemplateIncludeDeps(templateProcessor TemplateProcessor, basePath, viewsFolderPath, lwd string, template []byte, partialTemplateListIn *[]string) ([]byte, error) {
 	fb := new(bytes.Buffer)
 	wb := new(bytes.Buffer)
 	stackb := new(bytes.Buffer)
@@ -80,8 +80,11 @@ func parseTemplateIncludeDeps(templateProcessor TemplateProcessor, basePath, vie
 						if err != nil {
 							return nil, errors.New("partial template error (io): " + err.Error())
 						}
+						if partialTemplateListIn != nil {
+							*partialTemplateListIn = append(*partialTemplateListIn, lpath)
+						}
 						childp, _ := path.Split(lpath)
-						childbits, err = parseTemplateIncludeDeps(templateProcessor, basePath, viewsFolderPath, childp, childbits)
+						childbits, err = parseTemplateIncludeDeps(templateProcessor, basePath, viewsFolderPath, childp, childbits, partialTemplateListIn)
 						if err != nil {
 							return nil, errors.New("partial template error: " + err.Error())
 						}

@@ -640,7 +640,8 @@ func (a *App) loadTemplates() error {
 				return errors.New("loadTemplates TemplateProcessor.ReadFile " + path + " " + err.Error())
 			}
 			ldir, _ := filepath.Split(path)
-			bytes, err = a.parseTemplateIncludeDeps(ldir, bytes)
+			depList := make([]string, 0, 64)
+			bytes, err = a.parseTemplateIncludeDeps(ldir, bytes, &depList)
 			if err != nil {
 				return errors.New("loadTemplates TemplateProcessor.ReadFile " + path + " a.parseTemplateIncludeDeps " + err.Error())
 			}
@@ -648,6 +649,7 @@ func (a *App) loadTemplates() error {
 				tplInfo := &templateInfo{
 					path:       path,
 					lastUpdate: time.Now(),
+					deps:       depList,
 				}
 				if ext == ".pug" || ext == ".jade" {
 					// it's a jade
@@ -671,6 +673,7 @@ func (a *App) loadTemplates() error {
 					tplInfo := &templateInfo{
 						path:       path,
 						lastUpdate: time.Now(),
+						deps:       depList,
 					}
 					locPName := path + "_" + lcv
 					templ := template.New(locPName)
@@ -718,7 +721,8 @@ func (a *App) loadTemplates() error {
 									break
 								}
 								ldir, _ := filepath.Split(path)
-								bytes, err = a.parseTemplateIncludeDeps(ldir, bytes)
+								depList := make([]string, 0, 64)
+								bytes, err = a.parseTemplateIncludeDeps(ldir, bytes, &depList)
 								if err != nil {
 									a.Logger.Println("FSWATCH loadTemplates TemplateProcessor.parseTemplateIncludeDeps ", path, err.Error())
 									break
@@ -727,6 +731,7 @@ func (a *App) loadTemplates() error {
 									tplInfo := &templateInfo{
 										path:       path,
 										lastUpdate: time.Now(),
+										deps:       depList,
 									}
 									if ext == ".pug" || ext == ".jade" {
 										// it's a jade
@@ -747,11 +752,28 @@ func (a *App) loadTemplates() error {
 									tplInfo.data = templ
 									a.templateMap[path] = tplInfo
 									a.Logger.Println("FSWATCH reloaded template", path)
+									// update deps
+									{
+										for _, zv := range a.templateMap {
+											for _, d := range zv.deps {
+												if d == path {
+													evt := fsnotify.Event{
+														Name: zv.path,
+														Op:   fsnotify.Write,
+													}
+													go func() {
+														fswatcher.Events <- evt
+													}()
+												}
+											}
+										}
+									}
 								} else {
 									for _, lcv := range langs {
 										tplInfo := &templateInfo{
 											path:       path,
 											lastUpdate: time.Now(),
+											deps:       depList,
 										}
 										locPName := path + "_" + lcv
 										templ := template.New(locPName)
@@ -773,6 +795,22 @@ func (a *App) loadTemplates() error {
 										tplInfo.data = templ
 										a.templateMap[locPName] = tplInfo
 										a.Logger.Println("FSWATCH reloaded template", locPName)
+										// update deps
+										{
+											for _, zv := range a.templateMap {
+												for _, d := range zv.deps {
+													if d == path {
+														evt := fsnotify.Event{
+															Name: zv.path,
+															Op:   fsnotify.Write,
+														}
+														go func() {
+															fswatcher.Events <- evt
+														}()
+													}
+												}
+											}
+										}
 									}
 								}
 								//
