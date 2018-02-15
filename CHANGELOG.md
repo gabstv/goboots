@@ -1,3 +1,5 @@
+### 0.11.3
+- run ignore files
 ### 0.11.2
 - updating partial templates now trigger a reload on parent templates
 

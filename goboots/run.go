@@ -52,6 +52,8 @@ func runApp(args []string) {
 		fs.Parse(args[1:])
 	}
 
+	var wcount int
+	var wskip int
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		errorf("Could not init file watcher: " + err.Error() + "\n")
@@ -59,6 +61,7 @@ func runApp(args []string) {
 	defer w.Close()
 	wd, _ := os.Getwd()
 	w.Add(wd)
+	wcount++
 	// get ignores!
 	donotwatch := make([]func(path string, isDir bool) bool, 0)
 	ignoresLoop := func(p string, i os.FileInfo, er error) error {
@@ -123,12 +126,32 @@ func runApp(args []string) {
 			}
 
 			w.Add(p)
+			wcount++
 			print(p + "\n")
 		} else {
 			//print("FILE: " + p + "\n")
 		}
 		return nil
 	})
+	filepath.Walk(wd, func(p string, i os.FileInfo, er error) error {
+		if er != nil {
+			return nil
+		}
+		if i.IsDir() {
+			return nil
+		}
+		for _, func0 := range donotwatch {
+			if func0(p, true) {
+				if wer := w.Remove(p); wer == nil {
+					wskip++
+				}
+				return nil
+			}
+		}
+		return nil
+	})
+	print(fmt.Sprintln("Watching", wcount, "files"))
+	print(fmt.Sprintln("Skipped", wskip, "files"))
 	var cm *exec.Cmd
 	start := func() {
 		os.Remove("_goboots_main_")
