@@ -54,6 +54,7 @@ type AppConfig struct {
 	Verbose          bool
 	GZipDynamic      bool
 	GZipStatic       bool
+	SessionDebug     bool `yaml:"SessionDebug"`
 
 	StaticIndexFiles []string `yaml:"StaticIndexFiles"`
 

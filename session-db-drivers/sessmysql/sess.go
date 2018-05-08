@@ -3,26 +3,15 @@ package sessmysql
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gabstv/goboots"
-	"github.com/gabstv/goboots/session-db-drivers/sessmysql/files"
-	//_ "github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
 	"sync"
 	"time"
+
+	"github.com/gabstv/goboots"
+	"github.com/gabstv/goboots/session-db-drivers/sessmysql/files"
+	"github.com/jmoiron/sqlx"
 )
 
-/*
-type ISessionDBEngine interface {
-	SetApp(app *App)
-	GetSession(sid string) (*Session, error)
-	PutSession(session *Session) error
-	NewSession(session *Session) error
-	RemoveSession(session *Session) error
-	Cleanup(minTime time.Time)
-	Close()
-}
-*/
-
+// MysqlDBSession implements goboots ISessionDBEngine
 type MysqlDBSession struct {
 	w   *dbwrapper
 	app *goboots.App
@@ -116,11 +105,13 @@ func (w *dbwrapper) close() {
 	w.dbi = nil
 }
 
+// SetApp registers the goboots App to this session engine
 func (m *MysqlDBSession) SetApp(app *goboots.App) {
 	m.app = app
 	m.w = newWrapper(app)
 }
 
+// GetSession gets a goboots session
 func (m *MysqlDBSession) GetSession(sid string) (*goboots.Session, error) {
 	db, err := m.w.db()
 	if err != nil {
@@ -157,6 +148,7 @@ func (m *MysqlDBSession) GetSession(sid string) (*goboots.Session, error) {
 	return ses, nil
 }
 
+// PutSession saves a goboots session
 func (m *MysqlDBSession) PutSession(session *goboots.Session) error {
 	db, err := m.w.db()
 	if err != nil {
@@ -166,6 +158,7 @@ func (m *MysqlDBSession) PutSession(session *goboots.Session) error {
 	return err
 }
 
+// NewSession creates a new session
 func (m *MysqlDBSession) NewSession(session *goboots.Session) error {
 	db, err := m.w.db()
 	if err != nil {
@@ -175,10 +168,14 @@ func (m *MysqlDBSession) NewSession(session *goboots.Session) error {
 	return err
 }
 
+// RemoveSession deletes a session from the mysql
 func (m *MysqlDBSession) RemoveSession(session *goboots.Session) error {
 	db, err := m.w.db()
 	if err != nil {
 		return err
+	}
+	if m.app != nil && m.app.Config != nil && m.app.Config.SessionDebug {
+		db.Exec("UPDATE goboots_sessid SET delete_info=? WHERE sid=?", "goboots RemoveSession")
 	}
 	_, err = db.Exec("DELETE FROM goboots_sessid WHERE sid=?", session.SID)
 	return err
@@ -198,6 +195,7 @@ func mshl(data map[string]interface{}) []byte {
 	return bts
 }
 
+// Cleanup removes old sessions (abandoned sessions)
 func (m *MysqlDBSession) Cleanup(minTime time.Time) {
 	db, err := m.w.db()
 	if err != nil {
@@ -205,6 +203,9 @@ func (m *MysqlDBSession) Cleanup(minTime time.Time) {
 		return
 	}
 	// remove shortcount sessions
+	if m.app != nil && m.app.Config != nil && m.app.Config.SessionDebug {
+		db.Exec("UPDATE goboots_sessid SET delete_info=? WHERE shortcount < 4 AND shortexpires < NOW()", "goboots shortcount")
+	}
 	affected, err := db.Exec("DELETE FROM goboots_sessid WHERE shortcount < 4 AND shortexpires < NOW()")
 	if err != nil {
 		m.app.Logger.Println("MysqlDBSession cleanup error (shortcount):", err.Error())
@@ -212,6 +213,9 @@ func (m *MysqlDBSession) Cleanup(minTime time.Time) {
 	}
 	af1, _ := affected.RowsAffected()
 	// remove expired sessions
+	if m.app != nil && m.app.Config != nil && m.app.Config.SessionDebug {
+		db.Exec("UPDATE goboots_sessid SET delete_info=? WHERE expires < ?", "goboots default expires", minTime)
+	}
 	affected, err = db.Exec("DELETE FROM goboots_sessid WHERE expires < ?", minTime)
 	if err != nil {
 		m.app.Logger.Println("MysqlDBSession::Cleanup ok", af1, "entries removed")
@@ -219,9 +223,10 @@ func (m *MysqlDBSession) Cleanup(minTime time.Time) {
 		return
 	}
 	af2, _ := affected.RowsAffected()
-	m.app.Logger.Println("MysqlDBSession::Cleanup ok", af1+af2, "entries removed")
+	m.app.Logger.Println("MysqlDBSession::7 ok", af1+af2, "entries removed")
 }
 
+// Close closes the mysql connection
 func (m *MysqlDBSession) Close() {
 	m.w.close()
 }

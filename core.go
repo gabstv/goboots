@@ -337,6 +337,14 @@ func (s *Session) GetExpires() time.Time {
 		log.Println("Error @ (s *Session) GetExpires()", err)
 		return time.Now()
 	}
+	if cookie.Expires.IsZero() {
+		log.Println("goboots GetExpires IS ZERO TIME")
+		return time.Now().Add(time.Hour * 3)
+	}
+	if cookie.Expires.Year() < 1000 {
+		log.Println("goboots GetExpires IS ZERO TIME (2)")
+		return time.Now().Add(time.Hour * 4)
+	}
 	return cookie.Expires
 }
 
