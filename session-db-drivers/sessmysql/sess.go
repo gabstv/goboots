@@ -223,7 +223,7 @@ func (m *MysqlDBSession) Cleanup(minTime time.Time) {
 		return
 	}
 	af2, _ := affected.RowsAffected()
-	m.app.Logger.Println("MysqlDBSession::7 ok", af1+af2, "entries removed")
+	m.app.Logger.Println("MysqlDBSession::Cleanup ok", af1+af2, "entries removed")
 }
 
 // Close closes the mysql connection
