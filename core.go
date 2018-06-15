@@ -160,6 +160,8 @@ type Session struct {
 	Updated time.Time
 	r       *http.Request
 	w       http.ResponseWriter
+	domain  string
+	path    string
 }
 
 type SessFlash struct {
@@ -325,7 +327,7 @@ func (s *Session) GetStringD(key string, defaultValue string) string {
 }
 
 func (s *Session) Expire(t time.Time) {
-	SetCookieAdv(s.w, "goboots_sessid", s.SID, "/", "", t, 0, false, true)
+	SetCookieAdv(s.w, "goboots_sessid", s.SID, s.path, s.domain, t, 0, false, true)
 }
 
 func (s *Session) GetExpires() time.Time {
@@ -367,6 +369,8 @@ func (app *App) GetSession(w http.ResponseWriter, r *http.Request) *Session {
 			if err == nil {
 				msession.r = r
 				msession.w = w
+				msession.domain = app.Config.CookieDomain
+				msession.path = app.Config.CookiePath
 				return msession
 			}
 			app.Logger.Printf("SESSION ERROR :( [%s] %s\n", sid, err.Error())
@@ -383,6 +387,8 @@ func (app *App) GetSession(w http.ResponseWriter, r *http.Request) *Session {
 		Data:    make(map[string]interface{}),
 		Time:    time.Now(),
 		Updated: time.Now(),
+		domain:  app.Config.CookieDomain,
+		path:    app.Config.CookiePath,
 	}
 	err = curSessionDb.NewSession(session)
 	if err != nil {
@@ -391,7 +397,7 @@ func (app *App) GetSession(w http.ResponseWriter, r *http.Request) *Session {
 		w.Write([]byte("The server encountered an error while processing your request [ERR_CONN_NEW_SESSION]."))
 		return nil
 	}
-	SetCookieAdv(w, "goboots_sessid", sid, "/", "", time.Now().AddDate(0, 1, 0), 0, false, true)
+	SetCookieAdv(w, "goboots_sessid", sid, session.path, session.domain, time.Now().AddDate(0, 1, 0), 0, false, true)
 	session.w = w
 	session.r = r
 	return session
@@ -450,7 +456,7 @@ func FlushSession(s *Session) error {
 
 func DestroySession(w http.ResponseWriter, r *http.Request, s *Session) {
 	curSessionDb.RemoveSession(s)
-	SetCookieAdv(w, "goboots_sessid", "", "/", "", time.Now(), 1, false, true)
+	SetCookieAdv(w, "goboots_sessid", "", s.path, s.domain, time.Now(), 1, false, true)
 }
 
 // DEPRECATED
@@ -488,8 +494,9 @@ func SetCookieAdv(w http.ResponseWriter, name string, value string, path string,
 	http.SetCookie(w, cookie)
 }
 
+// SetCookieSimple sets an unsafe cookie
 func SetCookieSimple(w http.ResponseWriter, key string, value string) {
-	SetCookieAdv(w, key, value, "/", "", time.Now().AddDate(100, 0, 0), 0, false, false)
+	SetCookieAdv(w, key, value, "", "", time.Now().AddDate(100, 0, 0), 0, false, false)
 }
 
 func StrConcat(strings ...string) string {
