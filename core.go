@@ -164,6 +164,13 @@ type Session struct {
 	path    string
 }
 
+func (s *Session) RequestURI() string {
+	if s.r != nil {
+		return s.r.RequestURI
+	}
+	return "nil"
+}
+
 type SessFlash struct {
 	vals map[string]interface{}
 }
