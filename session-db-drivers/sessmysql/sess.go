@@ -144,7 +144,6 @@ func (m *MysqlDBSession) GetSession(sid string) (*goboots.Session, error) {
 	ses.Time = stime
 	ses.Updated = updated
 	ses.Data = umshl(data)
-	ses.Flush()
 	return ses, nil
 }
 
