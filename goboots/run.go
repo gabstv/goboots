@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/monochromegane/go-gitignore"
-	"gopkg.in/fsnotify.v1"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -13,6 +11,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/monochromegane/go-gitignore"
+	"gopkg.in/fsnotify.v1"
 )
 
 var cmdRun = &Command{
@@ -250,6 +251,20 @@ func runApp(args []string) {
 						if fn == "_goboots_main_" || strings.HasPrefix(fn, ".") {
 							break
 						}
+					}
+				}
+				if fi, z := os.Stat(evt.Name); z == nil {
+					isdir := fi.IsDir()
+					skipok := false
+					for _, v := range donotwatch {
+						if v(evt.Name, isdir) {
+							skipok = true
+							break
+						}
+					}
+					if skipok {
+						print("donotwatch caught " + evt.Name + "\n")
+						break
 					}
 				}
 				print("Will restart the app.\n")
