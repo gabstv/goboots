@@ -246,6 +246,17 @@ func runApp(args []string) {
 						if strings.HasPrefix(bdir, ".") {
 							break
 						}
+						skipok := false
+						for _, v := range donotwatch {
+							if v(evt.Name, true) {
+								skipok = true
+								break
+							}
+						}
+						if skipok {
+							print("donotwatch caught " + evt.Name + "\n")
+							break
+						}
 						w.Add(evt.Name)
 					} else {
 						if fn == "_goboots_main_" || strings.HasPrefix(fn, ".") {
@@ -258,6 +269,22 @@ func runApp(args []string) {
 					skipok := false
 					for _, v := range donotwatch {
 						if v(evt.Name, isdir) {
+							skipok = true
+							break
+						}
+					}
+					if skipok {
+						print("donotwatch caught " + evt.Name + "\n")
+						break
+					}
+				} else {
+					skipok := false
+					for _, v := range donotwatch {
+						if v(evt.Name, true) {
+							skipok = true
+							break
+						}
+						if v(evt.Name, false) {
 							skipok = true
 							break
 						}
