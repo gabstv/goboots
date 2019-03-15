@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/monochromegane/go-gitignore"
-	"gopkg.in/fsnotify.v1"
 )
 
 var cmdRun = &Command{
@@ -156,9 +156,8 @@ func runApp(args []string) {
 	var cm *exec.Cmd
 	start := func() {
 		os.Remove("_goboots_main_")
-		gp := os.Getenv("GOPATH")
 		cmbuild := exec.Command("go", "build", "-o", "_goboots_main_", defaultgofile)
-		cmbuild.Env = []string{"GOPATH=" + gp}
+		cmbuild.Env = os.Environ()
 		cmbuild.Stderr = os.Stderr
 		cmbuild.Stdout = os.Stdout
 		// run prebuild if any
