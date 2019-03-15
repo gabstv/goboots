@@ -1,3 +1,6 @@
+### 0.11.5
+- go modules
+- fixed goboots run on go 1.12.x
 ### 0.11.3
 - run ignore files
 ### 0.11.2
