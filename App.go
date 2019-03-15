@@ -653,7 +653,7 @@ func (a *App) loadTemplates() error {
 				}
 				if ext == ".pug" || ext == ".jade" {
 					// it's a jade
-					jadef, err := jade.Parse(path, string(bytes))
+					jadef, err := jade.Parse(path, bytes)
 					if err != nil {
 						return deepErrorStr("[0] error parsing pug template file " + path + ": " + err.Error())
 					}
@@ -679,7 +679,7 @@ func (a *App) loadTemplates() error {
 					templ := template.New(locPName)
 					if ext == ".pug" || ext == ".jade" {
 						// it's a jade
-						jadef, err := jade.Parse(locPName, string(bytes))
+						jadef, err := jade.Parse(locPName, bytes)
 						if err != nil {
 							return deepErrorStr("[1] error parsing pug template file " + locPName + ": " + err.Error())
 						}
@@ -735,7 +735,7 @@ func (a *App) loadTemplates() error {
 									}
 									if ext == ".pug" || ext == ".jade" {
 										// it's a jade
-										jadef, err := jade.Parse(path, string(bytes))
+										jadef, err := jade.Parse(path, bytes)
 										if err != nil {
 											a.Logger.Println("FSWATCH error parsing pug template file", path, err.Error())
 											break
@@ -779,7 +779,7 @@ func (a *App) loadTemplates() error {
 										templ := template.New(locPName)
 										if ext == ".pug" || ext == ".jade" {
 											// it's a jade
-											jadef, err := jade.Parse(locPName, string(bytes))
+											jadef, err := jade.Parse(locPName, bytes)
 											if err != nil {
 												a.Logger.Println("FSWATCH error parsing pug template file", locPName, ":", err.Error())
 												break
